@@ -1,0 +1,12 @@
+pandas
+numpy
+requests
+biopython
+chembl_webresource_client
+pydantic
+scikit-learn
+rdkit
+seaborn
+matplotlib
+XGBoost
+-e .

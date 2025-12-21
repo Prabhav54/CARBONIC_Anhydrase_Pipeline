@@ -1,0 +1,10 @@
+venv/
+carbonic_anhydrase_pipeline.egg-info/
+__pycache__/
+*.pyc
+.DS_Store
+.ipynb_checkpoints
+docking_results/
+logs/
+artifacts/
+Carbonic_ML_Pipeline.egg-info
