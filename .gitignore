@@ -8,3 +8,4 @@ docking_results/
 logs/
 artifacts/
 Carbonic_ML_Pipeline.egg-info
+catboost_info/
