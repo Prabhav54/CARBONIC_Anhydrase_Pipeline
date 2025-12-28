@@ -9,3 +9,4 @@ logs/
 artifacts/
 Carbonic_ML_Pipeline.egg-info
 catboost_info/
+notebook/.ipynb_checkpoints
