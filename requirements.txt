@@ -9,4 +9,3 @@ rdkit
 seaborn
 matplotlib
 XGBoost
--e .
