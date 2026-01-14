@@ -13,76 +13,108 @@ class DockingEngine:
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
+    def strict_clean_pdb(self, input_pdb, output_pdb):
+        """
+        STRICT CLEANER:
+        - Keeps 'ATOM' (Protein residues)
+        - Keeps 'HETATM' ONLY if it is Zinc (ZN)
+        - DISCARDS the native drug, water, and salts.
+        This prevents OpenBabel from crashing on the native ligand.
+        """
+        print(f"🧹 STRICT Cleaning {input_pdb}...")
+        atom_count = 0
+        zinc_count = 0
+        
+        with open(input_pdb, 'r') as f_in, open(output_pdb, 'w') as f_out:
+            for line in f_in:
+                # Keep Protein (Standard Residues)
+                if line.startswith("ATOM"):
+                    f_out.write(line)
+                    atom_count += 1
+                # Keep Zinc (Vital for Carbonic Anhydrase)
+                elif line.startswith("HETATM") and "ZN" in line:
+                    f_out.write(line)
+                    zinc_count += 1
+                # Everything else (Native Ligands like AZM, Water HOH) is DELETED.
+        
+        print(f"   -> Kept {atom_count} atoms and {zinc_count} Zinc ions.")
+        if atom_count == 0:
+            raise ValueError("❌ Error: The cleaned PDB is empty! Download failed?")
+
     def setup_receptor(self):
-        """Downloads PDB and converts to PDBQT using safe OpenBabel settings."""
+        """Downloads PDB, cleans it strictly, and converts to PDBQT."""
         raw_pdb = f"{self.output_dir}/{self.pdb_id}.pdb"
+        clean_pdb = f"{self.output_dir}/{self.pdb_id}_strict_clean.pdb"
         receptor_pdbqt = f"{self.output_dir}/{self.pdb_id}.pdbqt"
 
-        # 1. Download PDB
+        # 1. Download PDB if missing
         if not os.path.exists(raw_pdb):
             print(f"⬇️ Downloading {self.pdb_id}...")
             url = f"https://files.rcsb.org/download/{self.pdb_id}.pdb"
             response = requests.get(url)
+            if response.status_code != 200:
+                raise ValueError(f"❌ Failed to download PDB ID: {self.pdb_id}")
             with open(raw_pdb, "w") as f:
                 f.write(response.text)
 
-        # 2. Convert directly using OpenBabel (skipping manual cleaning which causes errors)
-        # -xr: Output rigid molecule (good for receptors)
-        # -h: Add hydrogens
-        # --partialcharge gasteiger: Calculate charges
-        if not os.path.exists(receptor_pdbqt):
+        # 2. STRICT Clean (Remove Native Ligand)
+        if not os.path.exists(clean_pdb):
+            self.strict_clean_pdb(raw_pdb, clean_pdb)
+
+        # 3. Convert to PDBQT using OpenBabel
+        # -xr: Output rigid molecule
+        # --partialcharge gasteiger: Calculate charges necessary for docking
+        if not os.path.exists(receptor_pdbqt) or os.path.getsize(receptor_pdbqt) == 0:
             print("⚙️ Converting Receptor to PDBQT...")
-            # We filter HOH (water) inside the command using grep if on Linux, or let obabel handle it
-            cmd = f"grep -v 'HOH' {raw_pdb} > {self.output_dir}/temp_clean.pdb && obabel {self.output_dir}/temp_clean.pdb -O {receptor_pdbqt} -xr -h --partialcharge gasteiger"
+            cmd = f"obabel {clean_pdb} -O {receptor_pdbqt} -xr --partialcharge gasteiger"
+            subprocess.run(cmd, shell=True, check=True)
             
-            # Run command safely
-            try:
-                subprocess.run(cmd, shell=True, check=True)
-            except subprocess.CalledProcessError:
-                print("❌ OpenBabel Failed! Using fallback conversion...")
-                subprocess.run(f"obabel {raw_pdb} -O {receptor_pdbqt} -xr -h --partialcharge gasteiger", shell=True)
+            # Verification
+            if not os.path.exists(receptor_pdbqt) or os.path.getsize(receptor_pdbqt) == 0:
+                raise ValueError("❌ OpenBabel generated an empty PDBQT file!")
 
         return receptor_pdbqt
 
     def find_zinc_center(self, pdb_file):
-        """Approximates the active site center based on Zinc location."""
-        # If the PDBQT exists, we can read it directly or read original PDB
-        search_file = pdb_file if os.path.exists(pdb_file) else f"{self.output_dir}/{self.pdb_id}.pdb"
-        
+        """Finds the geometric center of the Zinc atom."""
         coords = [0.0, 0.0, 0.0]
         found = False
-        with open(search_file, 'r') as f:
+        with open(pdb_file, 'r') as f:
             for line in f:
                 if "ZN" in line and ("HETATM" in line or "ATOM" in line):
-                    # PDB column format ensures these positions are correct
+                    # Parse PDB columns for X, Y, Z
                     try:
                         x = float(line[30:38])
                         y = float(line[38:46])
                         z = float(line[46:54])
                         coords = [x, y, z]
                         found = True
-                        break
+                        break # Found the first Zinc, good enough for CA
                     except ValueError:
                         continue
         
         if not found:
-            print("⚠️ Warning: No Zinc found. Using (0,0,0).")
+            print("⚠️ WARNING: No Zinc found in receptor! Docking might fail.")
+        else:
+            print(f"🎯 Zinc Center Found: {coords}")
         return coords
 
     def dock_molecule(self, smiles, mol_id):
-        print(f"🚀 Docking {mol_id}...")
+        print(f"\n🚀 Docking {mol_id}...")
         try:
             # 1. Setup Receptor
             receptor_pdbqt = self.setup_receptor()
-            center = self.find_zinc_center(receptor_pdbqt)
+            
+            # Use the clean PDB to find the center (Coordinates are same as PDBQT)
+            clean_pdb = f"{self.output_dir}/{self.pdb_id}_strict_clean.pdb"
+            center = self.find_zinc_center(clean_pdb)
 
-            # 2. Setup Ligand (Meeko v0.5+ Syntax Fix)
+            # 2. Setup Ligand
             mol = Chem.MolFromSmiles(smiles)
-            if not mol: raise ValueError("Invalid SMILES")
+            if not mol: raise ValueError("Invalid SMILES string")
             mol = Chem.AddHs(mol)
             AllChem.EmbedMolecule(mol, AllChem.ETKDG())
             
-            # New Meeko API
             preparator = MoleculePreparation()
             mol_setup = preparator.prepare(mol)
             ligand_pdbqt = PDBQTWriterLegacy.write_string(mol_setup[0])
@@ -92,20 +124,27 @@ class DockingEngine:
             v.set_receptor(receptor_pdbqt)
             v.set_ligand_from_string(ligand_pdbqt)
             
-            # Search Box (20x20x20 Angstroms around Zinc)
-            v.compute_vina_maps(center=center, box_size=[20, 20, 20])
+            # Increased Box Size to 25.0 to ensure fit
+            v.compute_vina_maps(center=center, box_size=[25, 25, 25])
             v.dock(exhaustiveness=8, n_poses=1)
             
-            # 4. Get Score
+            # 4. Results
             score = v.energies(n_poses=1)[0][0]
             
-            # 5. Save Output
+            # Save Output
             out_base = f"{self.output_dir}/{mol_id}"
             v.write_poses(f"{out_base}_ligand.pdbqt", n_poses=1, overwrite=True)
             
+            # Create Complex PDB for Visualization (Merge Receptor + Docked Ligand)
+            # We convert the docked ligand PDBQT -> PDB first
+            subprocess.run(f"obabel {out_base}_ligand.pdbqt -O {out_base}_ligand.pdb", shell=True)
+            
             print(f"   ✅ Score: {score} kcal/mol")
-            return {"score": score, "ligand_pdbqt": f"{out_base}_ligand.pdbqt"}
+            return {
+                "score": score,
+                "ligand_pdb": f"{out_base}_ligand.pdb"
+            }
 
         except Exception as e:
-            print(f"   ❌ Failed: {e}")
-            return None``
+            print(f"   ❌ Docking Failed: {e}")
+            return None
