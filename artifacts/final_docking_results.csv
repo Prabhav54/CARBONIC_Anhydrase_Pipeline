@@ -1,0 +1,11 @@
+Ligand_ID,Docking_Score_kcal_mol,Is_Potent?
+candidate_9,-10.63,YES
+candidate_3,-9.43,YES
+candidate_7,-9.4,YES
+candidate_2,-9.34,YES
+candidate_4,-9.11,YES
+candidate_1,-8.53,NO
+candidate_5,-8.34,NO
+candidate_8,-7.93,NO
+candidate_6,-7.8,NO
+candidate_0,-7.74,NO

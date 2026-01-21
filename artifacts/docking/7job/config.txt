@@ -1,0 +1,17 @@
+receptor = 7job.pdbqt
+ligand = ligand.pdbqt
+
+# Center of the Grid Box (Calculated in Step 3)
+center_x = 14.509
+center_y = -1.224
+center_z = 15.196
+
+# Size of the Grid Box (Angstroms)
+size_x = 20.0
+size_y = 20.0
+size_z = 20.0
+
+# Search Parameters
+exhaustiveness = 8
+num_modes = 9
+energy_range = 3

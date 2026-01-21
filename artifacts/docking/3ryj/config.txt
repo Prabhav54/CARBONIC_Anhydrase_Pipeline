@@ -1,0 +1,17 @@
+receptor = 3ryj.pdbqt
+ligand = ligand.pdbqt
+
+# Center of the Grid Box (Calculated in Step 3)
+center_x = 14.482
+center_y = -2.235
+center_z = 15.352
+
+# Size of the Grid Box (Angstroms)
+size_x = 20.0
+size_y = 20.0
+size_z = 20.0
+
+# Search Parameters
+exhaustiveness = 8
+num_modes = 9
+energy_range = 3
