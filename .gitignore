@@ -9,3 +9,7 @@ logs/
 Carbonic_ML_Pipeline.egg-info
 catboost_info/
 notebook/.ipynb_checkpoints
+*.sh
+Miniconda3-latest-Linux-x86_64.sh
+Miniconda3-latest-Linux-x86_64.sh.1
+
