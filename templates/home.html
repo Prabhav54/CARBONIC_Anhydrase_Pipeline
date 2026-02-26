@@ -2,100 +2,220 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AI Drug Discovery V2.1</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Drug Discovery | Pro Dashboard</title>
     
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script> 
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+    
     <style>
-        body { background-color: #f4f7f6; padding-bottom: 50px; }
-        .container { max-width: 1200px; background: white; padding: 30px; margin-top: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .viewer_3d { width: 100%; height: 400px; position: relative; background: #eef; border-radius: 10px; margin-top: 20px; border: 1px solid #ddd; }
-        .badge-novel { background-color: #6f42c1; color: white; } 
-        .badge-known { background-color: #0d6efd; color: white; }
+        :root {
+            --bg-color: #f0f4f8;
+            --card-bg: #ffffff;
+            --primary: #1e3a8a;
+            --accent: #3b82f6;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+        
+        body { background-color: var(--bg-color); font-family: 'Inter', sans-serif; color: var(--text-main); }
+        .main-container { max-width: 1600px; margin: 2rem auto; padding: 0 20px; }
+        
+        /* Glassmorphism Header */
+        .header-card { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); 
+            color: white; border-radius: 16px; padding: 2rem 2.5rem; margin-bottom: 2rem; 
+            display: flex; justify-content: space-between; align-items: center; 
+            box-shadow: 0 10px 30px rgba(30, 58, 138, 0.15);
+        }
+        .header-title h2 { font-weight: 800; letter-spacing: -0.5px; margin-bottom: 5px; }
+        .header-title p { color: #94a3b8; font-weight: 500; margin: 0; }
+        
+        .search-box { display: flex; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 50px; overflow: hidden; background: white; width: 450px;}
+        .search-box input { border: none; padding: 15px 20px; outline: none; box-shadow: none; font-weight: 500; }
+        .search-box button { background: var(--accent); color: white; border: none; padding: 0 30px; font-weight: 700; transition: 0.3s; }
+        .search-box button:hover { background: #2563eb; }
+
+        /* Content Panels */
+        .panel { 
+            background: var(--card-bg); border-radius: 16px; padding: 1.5rem 2rem; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 1.5rem; border: 1px solid #e2e8f0; 
+        }
+        
+        /* 3D Viewer */
+        .viewer-box { background: #f8fafc; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; height: 650px; position: relative; }
+        .viewer-overlay { position: absolute; bottom: 15px; left: 0; right: 0; text-align: center; pointer-events: none; }
+        .viewer-badge { background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: inline-block; backdrop-filter: blur(4px); }
+
+        /* Tables & Typography */
+        .table-custom th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; }
+        .table-custom td { vertical-align: middle; border-bottom: 1px solid #f8fafc; padding: 15px 10px; }
+        
+        /* Image Zoom Effect */
+        .mol-img-container { position: relative; width: 120px; height: 60px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 8px; border: 1px solid #f1f5f9; transition: all 0.3s ease; }
+        .mol-img-container img { max-width: 100%; max-height: 100%; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .mol-img-container:hover img { transform: scale(1.8); z-index: 100; position: relative; background: white; padding: 5px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        
+        /* Metrics & Bars */
+        .metric-mono { font-family: 'Roboto Mono', monospace; font-weight: 700; color: var(--primary); font-size: 1.1rem; }
+        .metric-sub { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+        .score-bar-bg { height: 6px; width: 100%; background: #e2e8f0; border-radius: 10px; margin-top: 6px; overflow: hidden; }
+        .score-bar-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #06b6d4); border-radius: 10px; }
+        
+        .docking-score { font-family: 'Roboto Mono', monospace; font-weight: 700; color: #059669; background: #d1fae5; padding: 6px 10px; border-radius: 8px; font-size: 0.9rem; border: 1px solid #a7f3d0; }
+        
+        /* Badges & Buttons */
+        .tooltip-trigger { border-bottom: 1px dashed #cbd5e1; cursor: help; }
+        .badge-qed { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-family: 'Roboto Mono', monospace; }
+        .badge-qed.high { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+        
+        .btn-action { width: 100%; border-radius: 8px; font-weight: 600; font-size: 0.8rem; padding: 8px; transition: all 0.2s; border: none; }
+        .btn-dock { background-color: #10b981; color: white; margin-bottom: 6px; box-shadow: 0 2px 6px rgba(16,185,129,0.3); }
+        .btn-dock:hover { background-color: #059669; transform: translateY(-1px); }
+        .btn-pubchem { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; text-decoration: none; display: block; text-align: center; }
+        .btn-pubchem:hover { background-color: #e2e8f0; color: #0f172a; }
+
+        /* Loader */
+        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(240, 244, 248, 0.85); backdrop-filter: blur(5px); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
+        .loader-mol { width: 60px; height: 60px; border: 4px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-0">🧬 AI Drug Discovery Pipeline</h1>
-                <p class="text-muted">Screen novel candidates against any PDB Target.</p>
-            </div>
-            <div class="col-md-4 text-end">
-                 <form action="/" method="POST" class="d-flex">
-                    <input type="text" class="form-control me-2" name="pdb_id" placeholder="PDB ID (e.g. 4ZAO)" required value="{{ pdb_id if pdb_id else '' }}">
-                    <button type="submit" class="btn btn-primary">Screen</button>
-                </form>
-            </div>
+<div id="loadingOverlay">
+    <div class="loader-mol"></div>
+    <h3 class="fw-bold" style="color: var(--primary);">Synthesizing Predictions...</h3>
+    <p class="text-muted fw-medium">Running Deep Learning Ensemble & Docking Simulations</p>
+</div>
+
+<div class="main-container">
+    
+    <div class="header-card">
+        <div class="header-title">
+            <h2><i class="fa-solid fa-network-wired me-3 text-info"></i>CA-Predictor Platform</h2>
+            <p>High-Throughput Virtual Screening & AI Optimization</p>
         </div>
+        <form action="/predict" method="POST" class="search-box" onsubmit="document.getElementById('loadingOverlay').style.display='flex';">
+            <input type="text" name="search_query" class="form-control" placeholder="Input PDB Target or SMILES..." required>
+            <button type="submit"><i class="fa-solid fa-bolt me-2"></i>Screen</button>
+        </form>
+    </div>
 
-        {% if error %}
-        <div class="alert alert-danger mt-3">{{ error }}</div>
-        {% endif %}
-
-        {% if results %}
-        <div class="row mt-4">
-            <div class="col-md-5">
-                <div class="card p-3 shadow-sm">
-                    <h5 class="text-center">Target Protein: <span class="text-primary fw-bold">{{ pdb_id }}</span></h5>
-                    
-                    <div id="container-01" class="viewer_3d"></div>
-                    
-                    <div class="text-center mt-2">
-                        <small class="text-muted">🖱️ Left Click: Rotate | 🖱️ Scroll: Zoom</small>
+    <div class="row g-4">
+        <div class="col-xl-4 col-lg-5">
+            <div class="panel h-100 mb-0">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold m-0" style="color: var(--primary);"><i class="fa-solid fa-cubes-stacked me-2"></i>Receptor Target</h5>
+                    <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill shadow-sm">{{ target_pdb }}</span>
+                </div>
+                <div id="container-01" class="viewer-box">
+                    <div class="viewer-overlay">
+                        <div class="viewer-badge"><i class="fa-solid fa-arrows-rotate me-2"></i>Drag to rotate • Scroll to zoom</div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="col-md-7">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h3>🏆 Top Candidates</h3>
-                    <button class="btn btn-sm btn-outline-success" onclick="window.print()">Download Report</button>
+        <div class="col-xl-8 col-lg-7">
+            
+            {% if refs %}
+            <div class="panel mb-4">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="bg-success rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                        <i class="fa-solid fa-check text-white"></i>
+                    </div>
+                    <h5 class="fw-bold m-0">Established Therapeutics (FDA)</h5>
                 </div>
-                
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
+                    <table class="table table-custom table-hover text-center align-middle">
+                        <thead>
                             <tr>
-                                <th>Rank</th>
-                                <th>Molecule</th>
-                                <th>Status</th>
-                                <th>Potency</th>
-                                <th>Violations</th>
-                                <th>Action</th>
+                                <th>Structure</th>
+                                <th>Compound</th>
+                                <th class="text-start">Potency Metrics</th>
+                                <th><span class="tooltip-trigger" data-bs-toggle="tooltip" title="Quantitative Estimate of Druglikeness (0 to 1)">ADMET (QED)</span></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for row in results %}
+                            {% for row in refs %}
                             <tr>
-                                <td><strong>#{{ loop.index }}</strong></td>
                                 <td>
-                                    <img src="data:image/png;base64,{{ row['Image_Base64'] }}" width="100" style="border-radius:5px;">
+                                    <div class="mol-img-container mx-auto">
+                                        <img src="data:image/png;base64,{{ row.Image_Base64 }}">
+                                    </div>
                                 </td>
+                                <td class="fw-bold text-dark">{{ row.Molecule_Name.split(' ')[0] }}</td>
+                                <td class="text-start" style="width: 30%;">
+                                    <div class="d-flex justify-content-between align-items-end">
+                                        <span class="metric-mono">{{ row.Predicted_pIC50 | round(2) }}</span>
+                                        <span class="metric-sub">{{ row.IC50_nM | round(2) }} nM</span>
+                                    </div>
+                                    <div class="score-bar-bg"><div class="score-bar-fill" style="width: {{ (row.Predicted_pIC50 / 10) * 100 }}%;"></div></div>
+                                </td>
+                                <td><span class="badge-qed high">{{ row.ADMET_QED }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel mb-0">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                            <i class="fa-solid fa-wand-magic-sparkles text-white"></i>
+                        </div>
+                        <h5 class="fw-bold m-0">AI Generated Lead Candidates</h5>
+                    </div>
+                    <span class="badge bg-light text-primary border px-3 py-2 rounded-pill">Top 10 Ranked</span>
+                </div>
+                <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+                    <table class="table table-custom table-hover text-center align-middle">
+                        <thead>
+                            <tr style="position: sticky; top: 0; background: white; z-index: 1;">
+                                <th>Rank</th>
+                                <th>Structure</th>
+                                <th class="text-start">Potency Model</th>
+                                <th><span class="tooltip-trigger" data-bs-toggle="tooltip" title="Binding Affinity (More negative is better)">Docking</span></th>
+                                <th><span class="tooltip-trigger" data-bs-toggle="tooltip" title="Rule of 5 Violations (Target is 0)">Lipinski</span></th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in novels %}
+                            <tr>
+                                <td class="fw-bold" style="color: #cbd5e1; font-size: 1.2rem;">#{{ loop.index }}</td>
                                 <td>
-                                    {% if row['Status'] == 'Novel Candidate' %}
-                                        <span class="badge badge-novel">Novel ✨</span>
+                                    <div class="mol-img-container mx-auto">
+                                        <img src="data:image/png;base64,{{ row.Image_Base64 }}">
+                                    </div>
+                                </td>
+                                <td class="text-start" style="width: 28%;">
+                                    <div class="d-flex justify-content-between align-items-end">
+                                        <span class="metric-mono">{{ row.Predicted_pIC50 | round(2) }}</span>
+                                        <span class="metric-sub">{{ row.IC50_nM | round(2) }} nM</span>
+                                    </div>
+                                    <div class="score-bar-bg"><div class="score-bar-fill" style="width: {{ (row.Predicted_pIC50 / 10) * 100 }}%;"></div></div>
+                                </td>
+                                <td><span class="docking-score">{{ row.Docking_Score }}</span></td>
+                                <td>
+                                    {% if row.Violations > 0 %}
+                                        <span class="badge bg-danger rounded-pill px-3">{{ row.Violations }}</span>
                                     {% else %}
-                                        <span class="badge badge-known">Known 💊</span>
+                                        <span class="badge bg-light text-success border border-success rounded-pill px-3"><i class="fa-solid fa-check me-1"></i>0</span>
                                     {% endif %}
                                 </td>
-                                <td>
-                                    <div class="fw-bold text-success">{{ "%.2f"|format(row['Predicted_pIC50']) }}</div>
-                                    <small class="text-muted">{{ row['IC50_nM'] }} nM</small>
-                                </td>
-                                <td>
-                                    {% if row['Violations'] == 0 %}
-                                        <span class="badge bg-success">0 (Safe)</span>
-                                    {% else %}
-                                        <span class="badge bg-warning text-dark">{{ row['Violations'] }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{{ row['Search_Link'] }}" target="_blank" class="btn btn-sm btn-outline-primary">🔍 Check</a>
+                                <td style="width: 15%;">
+                                    <button class="btn-action btn-dock" onclick="simulateDockingView()">
+                                        <i class="fa-solid fa-bullseye me-1"></i> Dock
+                                    </button>
+                                    <a href="{{ row.PubChem_Link }}" target="_blank" class="btn-action btn-pubchem">
+                                        <i class="fa-solid fa-database me-1"></i> PubChem
+                                    </a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -103,33 +223,46 @@
                     </table>
                 </div>
             </div>
+            {% endif %}
         </div>
-
-        <script>
-            $(document).ready(function() {
-                let element = $('#container-01');
-                let config = { backgroundColor: '#f0f2f5' };
-                let viewer = $3Dmol.createViewer( element, config );
-                
-                // Fetch PDB Data from RCSB
-                let pdbUri = "https://files.rcsb.org/view/{{ pdb_id }}.pdb";
-                
-                $.ajax({
-                    url: pdbUri,
-                    success: function( data ) {
-                        viewer.addModel( data, "pdb" );                       
-                        viewer.setStyle({}, {cartoon: {color: 'spectrum'}});  
-                        viewer.zoomTo();                                      
-                        viewer.render();                                      
-                    },
-                    error: function( hdr, status, err ) {
-                        $('#container-01').html('<div class="alert alert-warning">Could not load 3D Structure. (Network Error or Invalid ID)</div>');
-                    }
-                });
-            });
-        </script>
-        {% endif %}
     </div>
+</div>
 
+<script>
+    // Initialize Bootstrap Tooltips
+    document.addEventListener("DOMContentLoaded", function(){
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+
+    // 3Dmol.js Initialization
+    let viewer = $3Dmol.createViewer("container-01", {backgroundColor: "#f8fafc"});
+    let pdbId = "{{ target_pdb }}";
+
+    if (pdbId) {
+        $3Dmol.download("pdb:" + pdbId, viewer, {doAssembly: true, noSecondaryStructure: false}, function() {
+            viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+            viewer.zoomTo();
+            viewer.render();
+        });
+    }
+
+    // Docking Simulation Visuals
+    function simulateDockingView() {
+        // Change title to reflect state
+        document.querySelector("#container-01").previousElementSibling.innerHTML = 
+            "<h5 class='fw-bold m-0 text-success'><i class='fa-solid fa-microscope me-2'></i>Docking Analysis Active</h5><span class='badge bg-success fs-6 px-3 py-2 rounded-pill shadow-sm'>" + pdbId + "</span>";
+        
+        // Render physical docking visuals
+        viewer.setStyle({}, {cartoon: {color: '#cbd5e1', style: 'oval'}}); // Sleek grey protein
+        viewer.setStyle({resi: ["94", "96", "119"]}, {stick: {colorscheme: "greenCarbon", radius: 0.25}});
+        viewer.addSurface($3Dmol.SurfaceType.VDW, {opacity: 0.5, color: '#4ade80'}, {resi: ["94", "96", "119"]}); // Green binding pocket
+        viewer.zoomTo({resi: ["94", "96", "119"]});
+        viewer.render();
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

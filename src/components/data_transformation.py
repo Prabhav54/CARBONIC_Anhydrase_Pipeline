@@ -1,136 +1,142 @@
 import sys
-import os
 import numpy as np
 import pandas as pd
 from rdkit import Chem
-from rdkit.Chem import AllChem
-from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from rdkit.Chem import AllChem, Descriptors, Lipinski, QED
 
-from src.exception import CustomException
 from src.logger import logging
-from src.utils import save_object
-from dataclasses import dataclass
-
-@dataclass
-class DataTransformationConfig:
-    preprocessor_obj_file_path = os.path.join('artifacts', "preprocessor.pkl")
+from src.exception import CustomException
 
 class DataTransformation:
     def __init__(self):
-        self.data_transformation_config = DataTransformationConfig()
+        pass
 
-    def get_fingerprints(self, smiles_list, n_bits=2048):
-        """
-        Custom function to convert SMILES to Morgan Fingerprints.
-        """
-        fps = []
+    def get_fingerprints(self, smiles_list):
+        """Converts SMILES strings to 1024-bit Morgan Fingerprints."""
+        fingerprints = []
         valid_indices = []
-        logging.info("Generating ECFP4 Fingerprints...")
         
-        for i, smiles in enumerate(smiles_list):
+        logging.info("Generating 1024-bit Morgan Fingerprints...")
+        for i, smile in enumerate(smiles_list):
             try:
-                mol = Chem.MolFromSmiles(smiles)
+                mol = Chem.MolFromSmiles(smile)
                 if mol:
-                    fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=n_bits)
-                    fps.append(np.array(fp))
+                    # STRICT RULE: Must match notebook training exactly (radius=2, nBits=1024)
+                    fp = AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=1024)
+                    fingerprints.append(np.array(fp))
                     valid_indices.append(i)
-            except:
+            except Exception:
                 continue
-        return np.array(fps), valid_indices
+                
+        return np.array(fingerprints), valid_indices
 
-    def get_data_transformer_object(self):
-        """
-        This function creates the transformation pipeline for Protein Features.
-        (Fingerprints don't need scaling, so we handle them separately).
-        """
+    def compute_lipinski_admet(self, df, smiles_col='clean_smiles'):
+        """Calculates Druggability metrics for the dataframe (Used for UI)."""
+        logging.info("Computing Lipinski rules and ADMET (QED/TPSA) scores...")
+        
+        is_druggable_list, qed_list, tpsa_list = [], [], []
+        
+        for smile in df[smiles_col]:
+            mol = Chem.MolFromSmiles(smile)
+            if not mol:
+                is_druggable_list.append(False)
+                qed_list.append(0.0)
+                tpsa_list.append(0.0)
+                continue
+            
+            mw = Descriptors.MolWt(mol)
+            logp = Descriptors.MolLogP(mol)
+            h_donors = Lipinski.NumHDonors(mol)
+            h_acceptors = Lipinski.NumHAcceptors(mol)
+            
+            # Lipinski Rule of 5 check
+            druggable = (mw <= 500) and (logp <= 5) and (h_donors <= 5) and (h_acceptors <= 10)
+            is_druggable_list.append(druggable)
+            
+            qed_list.append(QED.qed(mol))               
+            tpsa_list.append(Descriptors.TPSA(mol))     
+            
+        df['Lipinski_Pass'] = is_druggable_list
+        df['QED_ADMET_Score'] = qed_list
+        df['TPSA'] = tpsa_list
+        
+        return df
+
+    # ==========================================================
+    # PHASE 1: TRAINING TRANSFORMATION (For Model Trainer)
+    # ==========================================================
+    def initiate_training_transformation(self, train_path, test_path):
+        """Prepares X_train, y_train, X_test, y_test from the split CSVs."""
         try:
-            # We only scale the continuous protein features
-            numerical_columns = [
-                'Protein_Weight', 
-                'Protein_Aromaticity', 
-                'Protein_Isoelectric', 
-                'Protein_Hydrophobicity'
-            ]
-
-            num_pipeline = Pipeline(
-                steps=[
-                    ("imputer", SimpleImputer(strategy="median")),
-                    ("scaler", StandardScaler())
-                ]
-            )
-
-            logging.info(f"Numerical columns for scaling: {numerical_columns}")
-
-            preprocessor = ColumnTransformer(
-                [
-                    ("num_pipeline", num_pipeline, numerical_columns)
-                ],
-                remainder="passthrough" # Keep other columns (like Fingerprints) as is
-            )
-
-            return preprocessor
-
-        except Exception as e:
-            raise CustomException(e, sys)
-
-    def initiate_data_transformation(self, train_path, test_path):
-        try:
+            logging.info("Starting Training Data Transformation...")
+            
+            # 1. Load the data
             train_df = pd.read_csv(train_path)
             test_df = pd.read_csv(test_path)
-
-            logging.info("Read train and test data completed")
-
-            logging.info("Generating Fingerprints for Training Data...")
-            # 1. Generate Fingerprints (Train)
-            train_fps, train_idx = self.get_fingerprints(train_df['clean_smiles'])
-            train_fps_df = pd.DataFrame(train_fps, columns=[f'fp_{i}' for i in range(2048)])
             
-            # 2. Extract Protein Features (Train)
-            protein_cols = ['Protein_Weight', 'Protein_Aromaticity', 'Protein_Isoelectric', 'Protein_Hydrophobicity']
-            train_protein = train_df.iloc[train_idx][protein_cols].reset_index(drop=True)
-            
-            # 3. Combine Features (Train)
-            input_feature_train_df = pd.concat([train_protein, train_fps_df], axis=1)
-            target_feature_train_df = train_df.iloc[train_idx]['pIC50'].reset_index(drop=True)
+            # Handle column names (your DB uses 'SMILES', UI uses 'clean_smiles')
+            smiles_col = 'SMILES' if 'SMILES' in train_df.columns else 'clean_smiles'
+            target_col = 'pIC50'
 
-            logging.info("Generating Fingerprints for Testing Data...")
-            # 4. Generate Fingerprints (Test)
-            test_fps, test_idx = self.get_fingerprints(test_df['clean_smiles'])
-            test_fps_df = pd.DataFrame(test_fps, columns=[f'fp_{i}' for i in range(2048)])
-            
-            # 5. Extract Protein Features (Test)
-            test_protein = test_df.iloc[test_idx][protein_cols].reset_index(drop=True)
-            
-            # 6. Combine Features (Test)
-            input_feature_test_df = pd.concat([test_protein, test_fps_df], axis=1)
-            target_feature_test_df = test_df.iloc[test_idx]['pIC50'].reset_index(drop=True)
+            # 2. Extract Features (Fingerprints) and filter valid rows for Train
+            X_train_fp, valid_train_idx = self.get_fingerprints(train_df[smiles_col].tolist())
+            y_train = train_df.iloc[valid_train_idx][target_col].values
 
-            logging.info("Applying Preprocessing Object on training and testing dataframes")
-            
-            preprocessing_obj = self.get_data_transformer_object()
+            # 3. Extract Features and filter valid rows for Test
+            X_test_fp, valid_test_idx = self.get_fingerprints(test_df[smiles_col].tolist())
+            y_test = test_df.iloc[valid_test_idx][target_col].values
 
-            # Note: We fit on the protein columns inside input_feature_train_df
-            input_feature_train_arr = preprocessing_obj.fit_transform(input_feature_train_df)
-            input_feature_test_arr = preprocessing_obj.transform(input_feature_test_df)
+            logging.info(f"Generated X_train shape: {X_train_fp.shape}, y_train shape: {y_train.shape}")
+            logging.info(f"Generated X_test shape: {X_test_fp.shape}, y_test shape: {y_test.shape}")
 
-            # Concatenate X and Y for the Trainer
-            train_arr = np.c_[input_feature_train_arr, np.array(target_feature_train_df)]
-            test_arr = np.c_[input_feature_test_arr, np.array(target_feature_test_df)]
+            return X_train_fp, y_train, X_test_fp, y_test
 
-            logging.info(f"Saved preprocessing object.")
-
-            save_object(
-                file_path=self.data_transformation_config.preprocessor_obj_file_path,
-                obj=preprocessing_obj
-            )
-
-            return (
-                train_arr,
-                test_arr,
-                self.data_transformation_config.preprocessor_obj_file_path,
-            )
         except Exception as e:
             raise CustomException(e, sys)
+
+    # ==========================================================
+    # PHASE 2: INFERENCE TRANSFORMATION (For Web App UI)
+    # ==========================================================
+    def initiate_inference_transformation(self, pool_df):
+        """Prepares features and calculates ADMET scores for the UI."""
+        try:
+            logging.info("Starting Inference Data Transformation...")
+            
+            # 1. Generate Fingerprints & Drop Invalid SMILES
+            smiles_col = 'clean_smiles' if 'clean_smiles' in pool_df.columns else 'SMILES'
+            X_features, valid_idx = self.get_fingerprints(pool_df[smiles_col].tolist())
+            
+            valid_df = pool_df.iloc[valid_idx].reset_index(drop=True)
+            logging.info(f"Retained {len(valid_df)} valid molecules out of {len(pool_df)}.")
+            
+            # 2. Compute Chemistry Properties (Lipinski, QED)
+            valid_df = self.compute_lipinski_admet(valid_df, smiles_col=smiles_col)
+            
+            return X_features, valid_df
+
+        except Exception as e:
+            raise CustomException(e, sys)
+
+# =====================================================================
+# TEST BLOCK
+# =====================================================================
+if __name__ == "__main__":
+    import os
+    print("🚀 Starting Data Transformation Test...")
+    transformer = DataTransformation()
+
+    # --- Test Phase 1 (Training) ---
+    print("\n--- Testing PHASE 1: Training Transformation ---")
+    train_path = os.path.join('artifacts', 'train.csv')
+    test_path = os.path.join('artifacts', 'test.csv')
+    
+    if os.path.exists(train_path) and os.path.exists(test_path):
+        try:
+            X_train, y_train, X_test, y_test = transformer.initiate_training_transformation(train_path, test_path)
+            print("✅ Successfully generated Model Training arrays!")
+            print(f"📊 X_train Shape: {X_train.shape} | y_train Shape: {y_train.shape}")
+            print(f"📊 X_test Shape: {X_test.shape}   | y_test Shape: {y_test.shape}")
+        except Exception as e:
+            print(f"❌ Error in Training Transformation: {e}")
+    else:
+        print("⚠️ train.csv or test.csv not found. Run data_ingestion.py first.")
