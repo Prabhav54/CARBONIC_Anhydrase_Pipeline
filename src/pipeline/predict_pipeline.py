@@ -1,4 +1,5 @@
 import sys
+import requests
 import os
 import pandas as pd
 import numpy as np
@@ -21,24 +22,70 @@ class VirtualScreeningPipeline:
         self.lstm_path = os.path.join("artifacts", "dnn_model.h5")
         self.docker = DockingEngine() 
 
-    def fetch_reference_drugs(self, pdb_id):
-        reference_drugs = [
-            {'Molecule_Name': 'Acetazolamide (FDA)', 'clean_smiles': 'CC(=O)Nc1nnc(s1)S(=O)(=O)N', 'Source': 'Known FDA Drug'},
-            {'Molecule_Name': 'Dorzolamide (FDA)', 'clean_smiles': 'CCNC1CCS(=O)(=O)c2c1sc(c2)S(=O)(=O)N', 'Source': 'Known FDA Drug'},
-            {'Molecule_Name': 'Methazolamide (FDA)', 'clean_smiles': 'CC(=O)N1N=C(SC1=N)S(=O)(=O)N', 'Source': 'Known FDA Drug'},
-            {'Molecule_Name': 'Brinzolamide (FDA)', 'clean_smiles': 'CCN(CC)C1CCS(=O)(=O)c2c1sc(c2S(=O)(=O)N)N', 'Source': 'Known FDA Drug'},
-            {'Molecule_Name': 'Ethoxzolamide (FDA)', 'clean_smiles': 'CCOc1ccc2c(c1)sc(n2)S(=O)(=O)N', 'Source': 'Known FDA Drug'},
-            {'Molecule_Name': 'Dichlorphenamide (FDA)', 'clean_smiles': 'c1cc(c(cc1S(=O)(=O)N)S(=O)(=O)N)Cl', 'Source': 'Known FDA Drug'},
-            {'Molecule_Name': 'Zonisamide (FDA)', 'clean_smiles': 'c1ccc2c(c1)c(no2)CS(=O)(=O)N', 'Source': 'Known FDA Drug'}
+    def fetch_chembl_drugs(self, pdb_id):
+        """Dynamically fetches known inhibitors from the ChEMBL API based on PDB ID."""
+        print(f"🌐 Querying ChEMBL Database for target {pdb_id}...")
+        
+        # Offline fallback just in case the user has no internet or the API is down
+        fallback_drugs = [
+            {'Molecule_Name': 'Acetazolamide', 'clean_smiles': 'CC(=O)Nc1nnc(s1)S(=O)(=O)N', 'Source': 'Offline Fallback'},
+            {'Molecule_Name': 'Dorzolamide', 'clean_smiles': 'CCNC1CCS(=O)(=O)c2c1sc(c2)S(=O)(=O)N', 'Source': 'Offline Fallback'}
         ]
-        if pdb_id.upper() in ['3IAI', '5FL4', '5FL6']: 
-            reference_drugs.append({'Molecule_Name': 'SLC-0111 (Clinical)', 'clean_smiles': 'c1ccc(cc1)C(=O)Nc2ccc(cc2)S(=O)(=O)N', 'Source': 'Clinical Trial'})
+        
+        try:
+            # 1. Map PDB IDs to ChEMBL Target IDs (Carbonic Anhydrase Isoforms)
+            pdb_to_chembl = {
+                '1CA2': 'CHEMBL205', '3HS4': 'CHEMBL205', '4ZAO': 'CHEMBL205', # CA II (Glaucoma)
+                '3IAI': 'CHEMBL3105', '5FL4': 'CHEMBL3105', '5FL6': 'CHEMBL3105', # CA IX (Tumors)
+                '1JCZ': 'CHEMBL3124', '5JN9': 'CHEMBL3124' # CA XII (Cancer)
+            }
+            # Default to CA II if they type an unknown PDB
+            target_chembl_id = pdb_to_chembl.get(pdb_id.upper(), 'CHEMBL205') 
             
-        return pd.DataFrame(reference_drugs)
+            # 2. Fetch drugs known to act on this specific target
+            moa_url = f"https://www.ebi.ac.uk/chembl/api/data/mechanism.json?target_chembl_id={target_chembl_id}"
+            moa_resp = requests.get(moa_url, timeout=5).json()
+            
+            # Extract unique molecule IDs (Limit to Top 6 to keep the UI clean)
+            mol_chembl_ids = list(set([m['molecule_chembl_id'] for m in moa_resp.get('mechanisms', [])]))[:6]
+            
+            if not mol_chembl_ids:
+                return pd.DataFrame(fallback_drugs)
+                
+            # 3. Fetch the actual SMILES and Names for these molecules from ChEMBL
+            mol_ids_str = ",".join(mol_chembl_ids)
+            mol_url = f"https://www.ebi.ac.uk/chembl/api/data/molecule.json?molecule_chembl_id__in={mol_ids_str}"
+            mol_resp = requests.get(mol_url, timeout=5).json()
+            
+            live_drugs = []
+            for mol in mol_resp.get('molecules', []):
+                smiles = mol.get('molecule_structures', {}).get('canonical_smiles')
+                pref_name = mol.get('pref_name')
+                chembl_id = mol.get('molecule_chembl_id')
+                
+                # Use the common name if available, otherwise use the ChEMBL ID
+                name = pref_name.title() if pref_name else chembl_id
+                
+                if smiles:
+                    live_drugs.append({
+                        'Molecule_Name': f"{name}",
+                        'clean_smiles': smiles,
+                        'Source': 'ChEMBL API'
+                    })
+                    
+            if live_drugs:
+                print("✅ Successfully fetched live data from ChEMBL!")
+                return pd.DataFrame(live_drugs)
+            else:
+                return pd.DataFrame(fallback_drugs)
+                
+        except Exception as e:
+            print(f"⚠️ ChEMBL API Error: {e}. Using offline fallback drugs.")
+            return pd.DataFrame(fallback_drugs)
 
     def run_screening(self, pool_df, pdb_id="3HS4"):
         try:
-            ref_df = self.fetch_reference_drugs(pdb_id)
+            ref_df = self.fetch_chembl_drugs(pdb_id)
             combined_pool = pd.concat([pool_df, ref_df], ignore_index=True)
             combined_pool.drop_duplicates(subset=['clean_smiles'], inplace=True)
             

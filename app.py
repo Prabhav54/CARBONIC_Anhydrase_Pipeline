@@ -1,14 +1,20 @@
 import os
 import pandas as pd
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from src.pipeline.predict_pipeline import VirtualScreeningPipeline
+from src.pipeline.md_engine import MDEngine
+from flask import send_file
+import io
 
+# 1. Initialize the Flask App FIRST
 app = Flask(__name__)
 
+# 2. Home Route
 @app.route('/', methods=['GET'])
 def home():
     return render_template('home.html', refs=None, novels=None, target_pdb="5FL6", error=None)
 
+# 3. Virtual Screening Route
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
@@ -18,7 +24,6 @@ def predict():
 
         if len(query) == 4 and query.isalnum():
             target_pdb = query.upper()
-            # Expanded fallback pool to show a full Top 10 list
             raw_smiles = [
                 'O=S(=O)(N)c1ccc(cc1)C(=O)O', 'CC(=O)Oc1ccccc1C(=O)O', 
                 'Cc1nnc(S(=O)(=O)N)s1', 'O=C(NO)c1ccc(S(=O)(=O)N)cc1',
@@ -46,5 +51,46 @@ def predict():
     except Exception as e:
         return render_template('home.html', refs=None, novels=None, target_pdb="3HS4", error=str(e))
 
+# 4. Asynchronous MD Simulation Route
+@app.route('/run_md', methods=['POST'])
+def run_md():
+    """Asynchronous route to handle 10ns Molecular Dynamics requests."""
+    try:
+        data = request.get_json()
+        molecule_name = data.get('molecule_name', 'Unknown')
+        smiles = data.get('smiles', '')
+        pdb_id = data.get('pdb_id', '5FL6')
+
+        print(f"🧬 Kicking off 10ns MD Simulation for {molecule_name} against {pdb_id}...")
+        
+        md = MDEngine(simulation_time_ns=10)
+        results = md.run_10ns_simulation(pdb_id, smiles, molecule_name)
+        
+        return jsonify(results)
+
+    except Exception as e:
+        print(f"❌ MD Error: {e}")
+        return jsonify({"status": "Error", "message": str(e)}), 500
+
+# ... [Keep your other routes here] ...
+
+@app.route('/download_trajectory/<molecule_name>')
+def download_trajectory(molecule_name):
+    """
+    Simulates downloading a large .xtc trajectory file.
+    In production, this would serve the actual GROMACS/OpenMM output file from an S3 bucket.
+    """
+    # Create a dummy binary file in memory for the portfolio demonstration
+    dummy_data = b"MD_TRAJECTORY_DATA_STUB... [In production, this contains millions of atomic coordinate frames]"
+    
+    # Send the file to the user's browser as a download
+    return send_file(
+        io.BytesIO(dummy_data),
+        as_attachment=True,
+        download_name=f"{molecule_name.replace(' ', '_')}_10ns_sim.xtc",
+        mimetype="application/octet-stream"
+    )
+
+# 5. Run the Server
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

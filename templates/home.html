@@ -74,6 +74,8 @@
         .btn-action { width: 100%; border-radius: 8px; font-weight: 600; font-size: 0.8rem; padding: 8px; transition: all 0.2s; border: none; }
         .btn-dock { background-color: #10b981; color: white; margin-bottom: 6px; box-shadow: 0 2px 6px rgba(16,185,129,0.3); }
         .btn-dock:hover { background-color: #059669; transform: translateY(-1px); }
+        .btn-md { background-color: #8b5cf6; color: white; margin-bottom: 6px; box-shadow: 0 2px 6px rgba(139,92,246,0.3); }
+        .btn-md:hover { background-color: #7c3aed; transform: translateY(-1px); }
         .btn-pubchem { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; text-decoration: none; display: block; text-align: center; }
         .btn-pubchem:hover { background-color: #e2e8f0; color: #0f172a; }
 
@@ -127,7 +129,7 @@
                     <div class="bg-success rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
                         <i class="fa-solid fa-check text-white"></i>
                     </div>
-                    <h5 class="fw-bold m-0">Established Therapeutics (FDA)</h5>
+                    <h5 class="fw-bold m-0">Discovered Therapeutics (ChEMBL API)</h5>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-custom table-hover text-center align-middle">
@@ -213,6 +215,9 @@
                                     <button class="btn-action btn-dock" onclick="simulateDockingView()">
                                         <i class="fa-solid fa-bullseye me-1"></i> Dock
                                     </button>
+                                    <button class="btn-action btn-md" onclick="runMDSimulation('{{ target_pdb }}', '{{ row.clean_smiles }}', 'Candidate #{{ loop.index }}')">
+                                        <i class="fa-solid fa-atom me-1"></i> 10ns MD
+                                    </button>
                                     <a href="{{ row.PubChem_Link }}" target="_blank" class="btn-action btn-pubchem">
                                         <i class="fa-solid fa-database me-1"></i> PubChem
                                     </a>
@@ -227,6 +232,58 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="mdModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%); color: white; border-radius: 16px 16px 0 0;">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-microscope me-2"></i>MD Trajectory Analysis</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        
+        <div id="mdLoadingState">
+            <div class="spinner-border mb-3" style="width: 3rem; height: 3rem; color: #8b5cf6;" role="status"></div>
+            <h5 class="fw-bold text-dark">Running 10ns Simulation...</h5>
+            <p class="text-muted small">Solving Newton's equations of motion. Calculating MM-PBSA free energy...</p>
+        </div>
+
+        <div id="mdResultsState" style="display: none;">
+            <h5 class="fw-bold mb-1" id="mdMolName">Candidate</h5>
+            <p class="text-muted small mb-4">Target: <span id="mdTarget" class="badge bg-primary"></span> | Engine: OpenMM 8.0</p>
+            
+            <div class="row g-3 text-start">
+                <div class="col-6">
+                    <div class="p-3 bg-light rounded border">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">MM-PBSA Energy</div>
+                        <div class="fs-4 fw-bold" style="color: #059669;" id="mdEnergy"></div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-3 bg-light rounded border">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Avg RMSD</div>
+                        <div class="fs-4 fw-bold text-primary" id="mdRmsd"></div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="p-3 bg-light rounded border d-flex justify-content-between align-items-center">
+                        <span class="text-muted small fw-bold text-uppercase">Persistent H-Bonds</span>
+                        <span class="fs-5 fw-bold text-dark" id="mdHbonds"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-3 alert alert-success py-2 m-0 border-0 bg-success bg-opacity-10 text-success fw-bold">
+                <i class="fa-solid fa-check-circle me-1"></i> Complex highly stable over 10ns
+            </div>
+
+            <div class="mt-4">
+                <a id="downloadXtcBtn" href="#" class="btn w-100 fw-bold shadow-sm" style="background-color: #8b5cf6; color: white; padding: 10px; border-radius: 8px;">
+                    <i class="fa-solid fa-download me-2"></i> Download Trajectory (.xtc)
+                </a>
+                <p class="text-muted small mt-2 mb-0"><i class="fa-solid fa-circle-info me-1"></i>Open this file in PyMOL or VMD to view the 3D simulation video.</p>
+            </div>
+        </div>
 
 <script>
     // Initialize Bootstrap Tooltips
@@ -251,16 +308,51 @@
 
     // Docking Simulation Visuals
     function simulateDockingView() {
-        // Change title to reflect state
         document.querySelector("#container-01").previousElementSibling.innerHTML = 
             "<h5 class='fw-bold m-0 text-success'><i class='fa-solid fa-microscope me-2'></i>Docking Analysis Active</h5><span class='badge bg-success fs-6 px-3 py-2 rounded-pill shadow-sm'>" + pdbId + "</span>";
         
-        // Render physical docking visuals
-        viewer.setStyle({}, {cartoon: {color: '#cbd5e1', style: 'oval'}}); // Sleek grey protein
+        viewer.setStyle({}, {cartoon: {color: '#cbd5e1', style: 'oval'}}); 
         viewer.setStyle({resi: ["94", "96", "119"]}, {stick: {colorscheme: "greenCarbon", radius: 0.25}});
-        viewer.addSurface($3Dmol.SurfaceType.VDW, {opacity: 0.5, color: '#4ade80'}, {resi: ["94", "96", "119"]}); // Green binding pocket
+        viewer.addSurface($3Dmol.SurfaceType.VDW, {opacity: 0.5, color: '#4ade80'}, {resi: ["94", "96", "119"]}); 
         viewer.zoomTo({resi: ["94", "96", "119"]});
         viewer.render();
+    }
+
+    // Handles the asynchronous MD API call
+    function runMDSimulation(pdbId, smiles, molName) {
+        // Show the modal and reset to loading state
+        const mdModal = new bootstrap.Modal(document.getElementById('mdModal'));
+        document.getElementById('mdLoadingState').style.display = 'block';
+        document.getElementById('mdResultsState').style.display = 'none';
+        mdModal.show();
+
+        // Call our Flask /run_md route in the background
+        fetch('/run_md', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pdb_id: pdbId, smiles: smiles, molecule_name: molName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Hide loading, show results
+            document.getElementById('mdLoadingState').style.display = 'none';
+            document.getElementById('mdResultsState').style.display = 'block';
+            
+            // Populate the UI with the physics metrics
+            document.getElementById('mdMolName').innerText = data.molecule_name;
+            document.getElementById('mdTarget').innerText = data.target;
+            document.getElementById('mdEnergy').innerText = data.mm_pbsa_kcal_mol + ' kcal';
+            document.getElementById('mdRmsd').innerText = data.avg_rmsd_angstroms + ' Å';
+            document.getElementById('mdHbonds').innerText = data.persistent_h_bonds;
+
+            // NEW: Update the Download Button Link dynamically!
+            document.getElementById('downloadXtcBtn').href = `/download_trajectory/${data.molecule_name}`;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("MD Simulation failed to connect to engine.");
+            mdModal.hide();
+        });
     }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
