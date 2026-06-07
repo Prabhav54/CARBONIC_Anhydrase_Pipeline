@@ -11,3 +11,6 @@ matplotlib
 xgboost
 flask
 gunicorn
+tensorflow
+joblib
+Pillow
