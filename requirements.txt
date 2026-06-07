@@ -9,6 +9,4 @@ rdkit
 seaborn
 matplotlib
 xgboost
-streamlit
-scipy
-joblib
+flask
