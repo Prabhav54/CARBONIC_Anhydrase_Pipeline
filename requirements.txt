@@ -11,6 +11,6 @@ matplotlib
 xgboost
 flask
 gunicorn
-tensorflow==2.15.0
+tensorflow==2.13.0
 joblib
 Pillow
