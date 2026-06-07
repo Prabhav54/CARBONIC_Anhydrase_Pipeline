@@ -8,4 +8,7 @@ scikit-learn
 rdkit
 seaborn
 matplotlib
-XGBoost
+xgboost
+streamlit
+scipy
+joblib
