@@ -11,7 +11,7 @@ matplotlib
 xgboost
 flask
 gunicorn
-tensorflow==2.13.0
+tensorflow==2.13.1
 joblib
 Pillow
 urllib3
