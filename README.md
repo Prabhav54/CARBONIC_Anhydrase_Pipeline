@@ -129,7 +129,9 @@ src/pipeline/
   ligand_prep.py            SMILES -> 3D PDBQT (RDKit only)
   docking_engine.py         Vina with AutoDock4Zn maps, pose + zinc distances
   admet_engine.py           Lipinski and QED
+  pose_io.py                docked pose -> SDF / RMSD helpers
 src/components/             training: ingestion, transformation, trainer, exporter
+src/analysis/md.py          OpenMM molecular dynamics (offline, conda only)
 data_curation_scripts/
   prepare_receptors.py      PDB -> charged receptor PDBQT (needs obabel)
   build_zinc_maps.py        AutoDock4Zn affinity maps (needs autogrid4 4.2.7)
@@ -150,6 +152,32 @@ conda install -c conda-forge openbabel autogrid
 python -m data_curation_scripts.prepare_receptors
 python -m data_curation_scripts.build_zinc_maps     # ~90 s for 8 targets
 ```
+
+### Molecular dynamics (notebook 05)
+
+Docking scores one rigid pose; MD checks whether the pose survives once
+everything can move. `notebook/05_MD_stability.ipynb` runs explicit-solvent
+OpenMM on the docked complex and plots ligand RMSD, backbone RMSD, the
+sulfonamide-N–Zn distance and hydrogen-bond counts.
+
+```bash
+conda create -n ca-md -c conda-forge python=3.11 openmm openmmforcefields \
+    openff-toolkit pdbfixer mdtraj rdkit matplotlib
+```
+
+Two things to know before reading its output:
+
+- **Measured throughput is about 2 ns/day on 4 CPU cores** for this 37,800-atom
+  system. The notebook defaults to a 20 ps run that exercises the pipeline and
+  produces real plots in minutes; a stability claim needs 10 ns or more, which
+  means a CUDA GPU.
+- **Zinc is a non-bonded ion** in Amber, so this force field under-binds the
+  sulfonamide–zinc contact by construction. A lengthening N–Zn distance is a
+  limitation of the model, not evidence against the pose.
+
+No binding free energies are reported: MM-PBSA from a single short trajectory
+is not trustworthy, and the previous version of this project presented exactly
+such numbers as if they were measurements.
 
 ### Retraining
 

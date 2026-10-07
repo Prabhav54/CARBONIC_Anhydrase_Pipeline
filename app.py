@@ -47,7 +47,6 @@ def home():
         "home.html",
         targets=TARGETS,
         target_pdb=DEFAULT_TARGET,
-        examples=EXAMPLE_CANDIDATES,
         smiles_input="\n".join(f"{name}, {smiles}" for name, smiles in EXAMPLE_CANDIDATES),
     )
 
@@ -60,7 +59,6 @@ def predict():
     page = {
         "targets": TARGETS,
         "target_pdb": target_pdb if target_pdb in TARGETS else DEFAULT_TARGET,
-        "examples": EXAMPLE_CANDIDATES,
         "smiles_input": smiles_input,
     }
     if target_pdb not in TARGETS:

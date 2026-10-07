@@ -186,7 +186,14 @@ def analyse_trajectory(topology_pdb, trajectory_dcd, ligand_resname="UNK"):
     sulfonamide_n = [i for i in ligand_atoms
                      if traj.topology.atom(i).element.symbol == "N" and bonded.get(i, set()) & sulfurs]
 
-    ligand_rmsd = md.rmsd(traj, traj, 0, atom_indices=ligand_atoms) * 10  # nm -> angstrom
+    # Ligand drift must be measured in the frame of the binding site, so it is
+    # computed directly on the backbone-superposed coordinates. md.rmsd() would
+    # re-superpose on the ligand itself and report its internal conformational
+    # change instead, which is a different (and here misleading) quantity.
+    displacement = traj.xyz[:, ligand_atoms, :] - traj.xyz[0, ligand_atoms, :]
+    ligand_rmsd = np.sqrt((displacement ** 2).sum(axis=-1).mean(axis=-1)) * 10  # nm -> A
+
+    # For the protein, superposing on the backbone is the conventional measure.
     backbone_rmsd = md.rmsd(traj, traj, 0, atom_indices=backbone) * 10
 
     zinc_distance = None
@@ -194,14 +201,18 @@ def analyse_trajectory(topology_pdb, trajectory_dcd, ligand_resname="UNK"):
         pairs = np.array([[n, zinc_atoms[0]] for n in sulfonamide_n])
         zinc_distance = md.compute_distances(traj, pairs).min(axis=1) * 10
 
-    protein_atoms = set(traj.topology.select("protein"))
-    hydrogen_bonds = []
-    for frame in range(traj.n_frames):
-        found = md.baker_hubbard(traj[frame], freq=0.0, periodic=False)
-        hydrogen_bonds.append(sum(
-            1 for donor, _, acceptor in found
-            if ({donor, acceptor} & set(ligand_atoms)) and ({donor, acceptor} & protein_atoms)
-        ))
+    # Hydrogen bonds are searched on a protein+ligand slice: including ~12,000
+    # waters makes this dominate the whole analysis and adds nothing, since only
+    # ligand-protein bonds are counted. wernet_nilsson gives per-frame results,
+    # which baker_hubbard (a frequency filter over the whole run) does not.
+    complex_only = traj.atom_slice(traj.topology.select(f"protein or resname {ligand_resname}"))
+    sliced_ligand = set(complex_only.topology.select(f"resname {ligand_resname}"))
+    sliced_protein = set(complex_only.topology.select("protein"))
+    hydrogen_bonds = [
+        sum(1 for donor, _, acceptor in frame_bonds
+            if ({donor, acceptor} & sliced_ligand) and ({donor, acceptor} & sliced_protein))
+        for frame_bonds in md.wernet_nilsson(complex_only)
+    ]
 
     return {
         "time_ps": traj.time if traj.time is not None else np.arange(traj.n_frames, dtype=float),

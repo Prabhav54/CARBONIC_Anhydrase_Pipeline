@@ -87,7 +87,8 @@ def screen(candidates, pdb_id=DEFAULT_TARGET):
             unique.append(entry)
 
     X, valid = fingerprints([e["clean_smiles"] for e in unique])
-    skipped = [unique[i]["Molecule_Name"] for i in range(len(unique)) if i not in set(valid)]
+    parsed = set(valid)
+    skipped = [entry["Molecule_Name"] for i, entry in enumerate(unique) if i not in parsed]
     if not valid:
         return [], [], reference_source, skipped
 

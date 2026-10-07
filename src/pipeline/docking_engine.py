@@ -21,6 +21,7 @@ import numpy as np
 from vina import Vina
 
 from src.pipeline.ligand_prep import LigandPrepError, prepare_ligand
+from src.pipeline.pose_io import pdbqt_to_pdb_block
 
 RECEPTOR_DIR = os.path.join("artifacts", "receptors")
 MAPS_DIR = os.path.join(RECEPTOR_DIR, "zn_maps")
@@ -45,9 +46,15 @@ def _unpack_maps(pdb_id):
     os.makedirs(dst, exist_ok=True)
     for name in os.listdir(src):
         out = os.path.join(dst, name[: -len(".gz")])
-        if not os.path.exists(out):
-            with gzip.open(os.path.join(src, name)) as s, open(out, "wb") as d:
-                shutil.copyfileobj(s, d)
+        if os.path.exists(out):
+            continue
+        # Decompress to a unique name and rename, so a concurrent request can
+        # never read a partially written map.
+        with gzip.open(os.path.join(src, name)) as s, \
+                tempfile.NamedTemporaryFile(dir=dst, delete=False) as d:
+            shutil.copyfileobj(s, d)
+            staged = d.name
+        os.replace(staged, out)
     return os.path.join(dst, f"{pdb_id}_tz")
 
 
@@ -66,6 +73,9 @@ class DockingEngine:
         self.pdb_id = pdb_id
         self.zinc = _zinc_position(pdb_id)
         self._lock = threading.Lock()  # a Vina object cannot be shared across threads
+        # One CPU and a fixed seed keep scores reproducible, which the re-docking
+        # benchmark in tests/test_docking.py depends on. Vina parallelises across
+        # cores by splitting the search, so results vary slightly with cpu > 1.
         self._vina = Vina(sf_name="ad4", cpu=1, seed=42, verbosity=0)
         self._vina.load_maps(_unpack_maps(pdb_id))
 
@@ -87,7 +97,7 @@ class DockingEngine:
             blocks = [b for b in self._vina.poses(n_poses=n_poses).split("ENDMDL") if "ATOM" in b]
 
         poses = []
-        for rank, block in enumerate(blocks):
+        for rank, block in enumerate(blocks[: len(energies)]):
             coords = _pose_coords(block, serial_to_idx)
             distances = [float(np.linalg.norm(coords[i] - self.zinc)) for i in sulfonamide_n if i in coords]
             nearest = round(min(distances), 2) if distances else None
@@ -97,6 +107,7 @@ class DockingEngine:
                 "zinc_distance": nearest,
                 "zinc_contact": nearest is not None and nearest <= ZINC_CONTACT_CUTOFF,
                 "pose_pdbqt": block.strip() + "\n",
+                "pose_pdb": pdbqt_to_pdb_block(block),  # for 3D viewers
             })
         if not poses:
             return {"error": "docking produced no poses"}

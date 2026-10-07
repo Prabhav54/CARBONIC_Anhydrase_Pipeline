@@ -407,7 +407,7 @@
                     '<td>' + contact + '</td>' +
                     '<td><button class="btn btn-sm btn-outline-primary">View in 3D</button></td>';
                 tr.querySelector('button').addEventListener('click',
-                    () => showPose(pose.pose_pdbqt, name + ' pose ' + pose.rank));
+                    () => showPose(pose.pose_pdb, name + ' pose ' + pose.rank));
                 rows.appendChild(tr);
             });
             document.getElementById('dockResults').classList.remove('d-none');

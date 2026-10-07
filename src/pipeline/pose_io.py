@@ -55,6 +55,28 @@ def write_pose_sdf(path, smiles, pose_pdbqt, serial_to_idx, name="", properties=
     return path
 
 
+# AutoDock types that are not element symbols.
+AUTODOCK_TO_ELEMENT = {"A": "C", "NA": "N", "NS": "N", "OA": "O", "OS": "O",
+                       "SA": "S", "HD": "H", "HS": "H"}
+
+
+def pdbqt_to_pdb_block(pose_pdbqt):
+    """Rewrites a pose as PDB, putting real element symbols in the element column.
+
+    PDBQT stores the AutoDock atom type there ('A' for aromatic carbon, 'HD',
+    'NA', ...), which viewers read as the element and get wrong.
+    """
+    lines = []
+    for line in pose_pdbqt.splitlines():
+        if not line.startswith(("ATOM", "HETATM")):
+            continue
+        autodock_type = line[77:79].strip()
+        element = AUTODOCK_TO_ELEMENT.get(autodock_type, autodock_type)
+        lines.append(f"{line[:76]}{element.rjust(2)}")
+    lines.append("END")
+    return "\n".join(lines) + "\n"
+
+
 def heavy_atom_rmsd(mol_a, mol_b):
     """Symmetry-aware heavy-atom RMSD between two conformers of one molecule."""
     a, b = Chem.RemoveHs(mol_a), Chem.RemoveHs(mol_b)

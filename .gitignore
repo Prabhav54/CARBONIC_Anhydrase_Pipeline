@@ -11,3 +11,5 @@ catboost_info/
 .vercel/
 .pytest_cache/
 *.sh
+artifacts/md/*_run/
+artifacts/md/_dev_run/
