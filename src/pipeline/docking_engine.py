@@ -25,8 +25,12 @@ from src.pipeline.pose_io import pdbqt_to_pdb_block
 
 RECEPTOR_DIR = os.path.join("artifacts", "receptors")
 MAPS_DIR = os.path.join(RECEPTOR_DIR, "zn_maps")
-EXHAUSTIVENESS = int(os.environ.get("VINA_EXHAUSTIVENESS", "8"))
-N_POSES = 3
+# Exhaustiveness 8 is Vina's default, but it often returns a single pose for these
+# ligands, and for carbonic anhydrase that pose is frequently the non-coordinating
+# one. Searching harder surfaces the zinc-binding poses the UI needs to show, and
+# still finishes in roughly 50 s of the 300 s serverless budget.
+EXHAUSTIVENESS = int(os.environ.get("VINA_EXHAUSTIVENESS", "16"))
+N_POSES = int(os.environ.get("VINA_N_POSES", "5"))
 # A sulfonamide N closer than this to the zinc is making the canonical contact.
 ZINC_CONTACT_CUTOFF = 2.5
 
