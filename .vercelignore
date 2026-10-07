@@ -1,0 +1,27 @@
+# Keep the upload small: excludeFiles in vercel.json trims the function bundle,
+# but this controls what is sent to Vercel in the first place.
+.git
+.venv
+venv
+.vscode
+logs
+__pycache__
+*.pyc
+*.egg-info
+.pytest_cache
+
+# Offline data and tooling the deployed app never touches.
+artifacts/structures
+artifacts/docking
+artifacts/data
+artifacts/md
+artifacts/*.pkl
+artifacts/*.h5
+artifacts/*.csv
+docking_results
+notebook
+data_curation_scripts
+tests
+src/analysis
+src/components
+src/bin

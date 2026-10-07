@@ -95,9 +95,10 @@ vercel deploy
 ```
 
 `vercel.json` sets 300 s `maxDuration` (docking takes 10â€“90 s per molecule) and
-excludes the large offline data from the function bundle. Deployed size is about
-**393 MB** of the 500 MB limit: 336 MB of dependencies plus 57 MB of receptors,
-zinc maps and the model.
+2 GB memory, and excludes the large offline data from the function bundle.
+`.vercelignore` keeps that data out of the upload as well. Deployed size is about
+**393 MB** of the 500 MB Python limit: 336 MB of dependencies plus 57 MB of
+receptors, zinc maps and the model.
 
 Two deployment constraints shaped the code:
 
@@ -112,8 +113,17 @@ Two deployment constraints shaped the code:
   torsion counts match Meeko exactly â€” `tests/test_ligand_prep.py`), and 2D
   structures are drawn in the browser.
 
-`maxDuration` above 60 s needs a Vercel Pro plan. On Hobby, lower it to 60 and
-set `VINA_EXHAUSTIVENESS=4`; large or flexible ligands may still time out.
+### Plan limits
+
+With Fluid compute (on by default), **Hobby allows 300 s `maxDuration`** â€” the
+same default and maximum as Pro â€” so the docking route fits without a paid plan.
+Hobby does cap memory at **2 GB / 1 vCPU**, which is why `vercel.json` requests
+2048 MB; asking for more is rejected. Vina is configured for a single CPU
+anyway, so the quoted 10â€“90 s docking times are what Hobby delivers.
+
+If a large, flexible ligand still approaches the limit, set
+`VINA_EXHAUSTIVENESS=4` as a project environment variable to halve the search
+time at some cost in pose quality.
 
 ---
 
@@ -176,9 +186,9 @@ Two things to know before reading its output:
   limitation of the model, not evidence against the pose.
 
 Running the notebook as shipped shows why that second point matters: the docked
-pose starts with the sulfonamide nitrogen 1.9 Å from the zinc, and **energy
-minimisation alone moves it to 3.2 Å** before any dynamics run. The ligand stays
-in the pocket (hydrogen bonds hold, backbone RMSD 0.66 Å) but the coordination is
+pose starts with the sulfonamide nitrogen 1.9 ï¿½ from the zinc, and **energy
+minimisation alone moves it to 3.2 ï¿½** before any dynamics run. The ligand stays
+in the pocket (hydrogen bonds hold, backbone RMSD 0.66 ï¿½) but the coordination is
 lost immediately. That is a verdict on the force field, not on acetazolamide.
 
 No binding free energies are reported: MM-PBSA from a single short trajectory
