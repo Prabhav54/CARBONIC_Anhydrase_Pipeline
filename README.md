@@ -175,6 +175,12 @@ Two things to know before reading its output:
   sulfonamideâ€“zinc contact by construction. A lengthening Nâ€“Zn distance is a
   limitation of the model, not evidence against the pose.
 
+Running the notebook as shipped shows why that second point matters: the docked
+pose starts with the sulfonamide nitrogen 1.9 Å from the zinc, and **energy
+minimisation alone moves it to 3.2 Å** before any dynamics run. The ligand stays
+in the pocket (hydrogen bonds hold, backbone RMSD 0.66 Å) but the coordination is
+lost immediately. That is a verdict on the force field, not on acetazolamide.
+
 No binding free energies are reported: MM-PBSA from a single short trajectory
 is not trustworthy, and the previous version of this project presented exactly
 such numbers as if they were measurements.
