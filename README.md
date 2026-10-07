@@ -6,6 +6,12 @@ real AutoDock Vina docking against the CA active site.
 
 Built as a Flask app that deploys to Vercel as a single Python function.
 
+**Live:** https://carbonic-anhydrase-pipeline.vercel.app
+
+Verified on that deployment: screening returns in ~3 s, and docking
+acetazolamide against 3HS4 takes ~52 s and returns five poses, two of which
+coordinate the zinc at 2.0–2.2 Å.
+
 ---
 
 ## What it actually does
@@ -91,8 +97,11 @@ pytest -m slow           # docking, including the re-docking benchmark (~30 s)
 
 ```bash
 npm i -g vercel
-vercel deploy
+vercel deploy --prod
 ```
+
+The project is linked as `prabhav54s-projects/carbonic-anhydrase-pipeline`;
+subsequent `vercel deploy --prod` runs redeploy to the same URL.
 
 `vercel.json` sets 300 s `maxDuration` (docking takes 10â€“90 s per molecule) and
 2 GB memory, and excludes the large offline data from the function bundle.
