@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Drug Discovery | Pro Dashboard</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <title>CA-Predictor</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/smiles-drawer@2.1.7/dist/smiles-drawer.min.js"></script>
+
     <style>
         :root {
             --bg-color: #f0f4f8;
@@ -18,208 +19,188 @@
             --accent: #3b82f6;
             --text-main: #0f172a;
             --text-muted: #64748b;
+            --border: #e2e8f0;
         }
-        
         body { background-color: var(--bg-color); font-family: 'Inter', sans-serif; color: var(--text-main); }
         .main-container { max-width: 1600px; margin: 2rem auto; padding: 0 20px; }
-        
-        /* Glassmorphism Header */
-        .header-card { 
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); 
-            color: white; border-radius: 16px; padding: 2rem 2.5rem; margin-bottom: 2rem; 
-            display: flex; justify-content: space-between; align-items: center; 
+
+        .header-card {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+            color: white; border-radius: 16px; padding: 2rem 2.5rem; margin-bottom: 1.5rem;
             box-shadow: 0 10px 30px rgba(30, 58, 138, 0.15);
         }
-        .header-title h2 { font-weight: 800; letter-spacing: -0.5px; margin-bottom: 5px; }
-        .header-title p { color: #94a3b8; font-weight: 500; margin: 0; }
-        
-        .search-box { display: flex; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 50px; overflow: hidden; background: white; width: 450px;}
-        .search-box input { border: none; padding: 15px 20px; outline: none; box-shadow: none; font-weight: 500; }
-        .search-box button { background: var(--accent); color: white; border: none; padding: 0 30px; font-weight: 700; transition: 0.3s; }
-        .search-box button:hover { background: #2563eb; }
+        .header-card h2 { font-weight: 800; letter-spacing: -0.5px; margin-bottom: 5px; }
+        .header-card p { color: #94a3b8; font-weight: 500; margin: 0; }
 
-        /* Content Panels */
-        .panel { 
-            background: var(--card-bg); border-radius: 16px; padding: 1.5rem 2rem; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 1.5rem; border: 1px solid #e2e8f0; 
+        .panel {
+            background: var(--card-bg); border-radius: 16px; padding: 1.5rem 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 1.5rem; border: 1px solid var(--border);
         }
-        
-        /* 3D Viewer */
-        .viewer-box { background: #f8fafc; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; height: 650px; position: relative; }
-        .viewer-overlay { position: absolute; bottom: 15px; left: 0; right: 0; text-align: center; pointer-events: none; }
-        .viewer-badge { background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: inline-block; backdrop-filter: blur(4px); }
+        .panel h5 { font-weight: 700; }
 
-        /* Tables & Typography */
+        .viewer-box { background: #f8fafc; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); height: 520px; position: relative; }
+        .viewer-caption { font-size: 0.8rem; color: var(--text-muted); }
+
         .table-custom th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; }
-        .table-custom td { vertical-align: middle; border-bottom: 1px solid #f8fafc; padding: 15px 10px; }
-        
-        /* Image Zoom Effect */
-        .mol-img-container { position: relative; width: 120px; height: 60px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 8px; border: 1px solid #f1f5f9; transition: all 0.3s ease; }
+        .table-custom td { vertical-align: middle; border-bottom: 1px solid #f8fafc; padding: 14px 10px; }
+
+        .mol-img-container { position: relative; width: 120px; height: 60px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 8px; border: 1px solid #f1f5f9; }
         .mol-img-container img { max-width: 100%; max-height: 100%; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .mol-img-container:hover img { transform: scale(1.8); z-index: 100; position: relative; background: white; padding: 5px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
-        
-        /* Metrics & Bars */
+
         .metric-mono { font-family: 'Roboto Mono', monospace; font-weight: 700; color: var(--primary); font-size: 1.1rem; }
         .metric-sub { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
-        .score-bar-bg { height: 6px; width: 100%; background: #e2e8f0; border-radius: 10px; margin-top: 6px; overflow: hidden; }
+        .score-bar-bg { height: 6px; width: 100%; background: var(--border); border-radius: 10px; margin-top: 6px; overflow: hidden; }
         .score-bar-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #06b6d4); border-radius: 10px; }
-        
-        .docking-score { font-family: 'Roboto Mono', monospace; font-weight: 700; color: #059669; background: #d1fae5; padding: 6px 10px; border-radius: 8px; font-size: 0.9rem; border: 1px solid #a7f3d0; }
-        
-        /* Badges & Buttons */
-        .tooltip-trigger { border-bottom: 1px dashed #cbd5e1; cursor: help; }
+
         .badge-qed { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-family: 'Roboto Mono', monospace; }
         .badge-qed.high { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
-        
-        .btn-action { width: 100%; border-radius: 8px; font-weight: 600; font-size: 0.8rem; padding: 8px; transition: all 0.2s; border: none; }
-        .btn-dock { background-color: #10b981; color: white; margin-bottom: 6px; box-shadow: 0 2px 6px rgba(16,185,129,0.3); }
-        .btn-dock:hover { background-color: #059669; transform: translateY(-1px); }
-        .btn-md { background-color: #8b5cf6; color: white; margin-bottom: 6px; box-shadow: 0 2px 6px rgba(139,92,246,0.3); }
-        .btn-md:hover { background-color: #7c3aed; transform: translateY(-1px); }
-        .btn-pubchem { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; text-decoration: none; display: block; text-align: center; }
-        .btn-pubchem:hover { background-color: #e2e8f0; color: #0f172a; }
+        .dock-score { font-family: 'Roboto Mono', monospace; font-weight: 700; color: #059669; }
+        .tooltip-trigger { border-bottom: 1px dashed #cbd5e1; cursor: help; }
 
-        /* Loader */
-        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(240, 244, 248, 0.85); backdrop-filter: blur(5px); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
-        .loader-mol { width: 60px; height: 60px; border: 4px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn-action { width: 100%; border-radius: 8px; font-weight: 600; font-size: 0.8rem; padding: 8px; transition: all 0.2s; border: none; }
+        .btn-dock { background-color: #10b981; color: white; margin-bottom: 6px; }
+        .btn-dock:hover:not(:disabled) { background-color: #059669; }
+        .btn-dock:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-pubchem { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; text-decoration: none; display: block; text-align: center; }
+        .btn-pubchem:hover { background-color: var(--border); color: #0f172a; }
+
+        .smiles-input { font-family: 'Roboto Mono', monospace; font-size: 0.85rem; }
+        .method-note { font-size: 0.8rem; color: var(--text-muted); background: #f8fafc; border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 6px; }
+
+        #loadingOverlay { display: none; position: fixed; inset: 0; background: rgba(240, 244, 248, 0.88); backdrop-filter: blur(5px); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
+        .loader-mol { width: 60px; height: 60px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
 <div id="loadingOverlay">
     <div class="loader-mol"></div>
-    <h3 class="fw-bold" style="color: var(--primary);">Synthesizing Predictions...</h3>
-    <p class="text-muted fw-medium">Running Deep Learning Ensemble & Docking Simulations</p>
+    <h3 class="fw-bold" style="color: var(--primary);">Scoring candidates…</h3>
+    <p class="text-muted fw-medium">Running the potency model and drug-likeness filters</p>
 </div>
 
 <div class="main-container">
-    
+
     <div class="header-card">
-        <div class="header-title">
-            <h2><i class="fa-solid fa-network-wired me-3 text-info"></i>CA-Predictor Platform</h2>
-            <p>High-Throughput Virtual Screening & AI Optimization</p>
-        </div>
-        <form action="/predict" method="POST" class="search-box" onsubmit="document.getElementById('loadingOverlay').style.display='flex';">
-            <input type="text" name="search_query" class="form-control" placeholder="Input PDB Target or SMILES..." required>
-            <button type="submit"><i class="fa-solid fa-bolt me-2"></i>Screen</button>
+        <h2><i class="fa-solid fa-network-wired me-3 text-info"></i>CA-Predictor</h2>
+        <p>Virtual screening for carbonic anhydrase inhibitors</p>
+    </div>
+
+    <div class="panel">
+        <form action="/predict" method="POST" onsubmit="document.getElementById('loadingOverlay').style.display='flex';">
+            <div class="row g-3">
+                <div class="col-lg-3">
+                    <label class="form-label fw-semibold small text-uppercase text-muted">Target structure</label>
+                    <select name="target_pdb" class="form-select" id="targetSelect">
+                        {% for pdb_id, meta in targets.items() %}
+                        <option value="{{ pdb_id }}" {% if pdb_id == target_pdb %}selected{% endif %}>
+                            {{ pdb_id }} — {{ meta.isoform }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p class="method-note mt-3 mb-0">
+                        Potency comes from a Random Forest + LSTM model trained on ChEMBL IC50 data.
+                        Docking runs AutoDock Vina with the AutoDock4Zn force field, which accounts for
+                        the active-site zinc that sulfonamides coordinate.
+                    </p>
+                </div>
+                <div class="col-lg-9">
+                    <label class="form-label fw-semibold small text-uppercase text-muted">
+                        Candidate molecules — one SMILES per line, optionally <code>name, smiles</code>
+                    </label>
+                    <textarea name="smiles_input" rows="7" class="form-control smiles-input" required>{{ smiles_input }}</textarea>
+                    <button type="submit" class="btn btn-primary fw-bold mt-3 px-4">
+                        <i class="fa-solid fa-bolt me-2"></i>Screen candidates
+                    </button>
+                </div>
+            </div>
         </form>
     </div>
+
+    {% if error %}
+    <div class="alert alert-danger fw-semibold">{{ error }}</div>
+    {% endif %}
+
+    {% if skipped %}
+    <div class="alert alert-warning">
+        Could not parse {{ skipped | length }} input(s): {{ skipped | join(', ') }}
+    </div>
+    {% endif %}
 
     <div class="row g-4">
         <div class="col-xl-4 col-lg-5">
             <div class="panel h-100 mb-0">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="fw-bold m-0" style="color: var(--primary);"><i class="fa-solid fa-cubes-stacked me-2"></i>Receptor Target</h5>
-                    <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill shadow-sm">{{ target_pdb }}</span>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="m-0" style="color: var(--primary);"><i class="fa-solid fa-cubes-stacked me-2"></i>Receptor</h5>
+                    <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill">{{ target_pdb }}</span>
                 </div>
-                <div id="container-01" class="viewer-box">
-                    <div class="viewer-overlay">
-                        <div class="viewer-badge"><i class="fa-solid fa-arrows-rotate me-2"></i>Drag to rotate • Scroll to zoom</div>
-                    </div>
-                </div>
+                <div id="viewer" class="viewer-box"></div>
+                <p class="viewer-caption mt-2 mb-0" id="viewerCaption">
+                    Drag to rotate, scroll to zoom. The zinc ion is shown as a grey sphere.
+                </p>
             </div>
         </div>
 
         <div class="col-xl-8 col-lg-7">
-            
-            {% if refs %}
-            <div class="panel mb-4">
-                <div class="d-flex align-items-center mb-4">
-                    <div class="bg-success rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                        <i class="fa-solid fa-check text-white"></i>
-                    </div>
-                    <h5 class="fw-bold m-0">Discovered Therapeutics (ChEMBL API)</h5>
+            {% if novels %}
+            <div class="panel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="m-0"><i class="fa-solid fa-flask-vial me-2 text-primary"></i>Your candidates</h5>
+                    <span class="badge bg-light text-primary border px-3 py-2 rounded-pill">{{ novels | length }} ranked</span>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-custom table-hover text-center align-middle">
+                    <table class="table table-custom table-hover align-middle text-center">
                         <thead>
                             <tr>
+                                <th>#</th>
                                 <th>Structure</th>
-                                <th>Compound</th>
-                                <th class="text-start">Potency Metrics</th>
-                                <th><span class="tooltip-trigger" data-bs-toggle="tooltip" title="Quantitative Estimate of Druglikeness (0 to 1)">ADMET (QED)</span></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in refs %}
-                            <tr>
-                                <td>
-                                    <div class="mol-img-container mx-auto">
-                                        <img src="data:image/png;base64,{{ row.Image_Base64 }}">
-                                    </div>
-                                </td>
-                                <td class="fw-bold text-dark">{{ row.Molecule_Name.split(' ')[0] }}</td>
-                                <td class="text-start" style="width: 30%;">
-                                    <div class="d-flex justify-content-between align-items-end">
-                                        <span class="metric-mono">{{ row.Predicted_pIC50 | round(2) }}</span>
-                                        <span class="metric-sub">{{ row.IC50_nM | round(2) }} nM</span>
-                                    </div>
-                                    <div class="score-bar-bg"><div class="score-bar-fill" style="width: {{ (row.Predicted_pIC50 / 10) * 100 }}%;"></div></div>
-                                </td>
-                                <td><span class="badge-qed high">{{ row.ADMET_QED }}</span></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="panel mb-0">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div class="d-flex align-items-center">
-                        <div class="bg-primary rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                            <i class="fa-solid fa-wand-magic-sparkles text-white"></i>
-                        </div>
-                        <h5 class="fw-bold m-0">AI Generated Lead Candidates</h5>
-                    </div>
-                    <span class="badge bg-light text-primary border px-3 py-2 rounded-pill">Top 10 Ranked</span>
-                </div>
-                <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
-                    <table class="table table-custom table-hover text-center align-middle">
-                        <thead>
-                            <tr style="position: sticky; top: 0; background: white; z-index: 1;">
-                                <th>Rank</th>
-                                <th>Structure</th>
-                                <th class="text-start">Potency Model</th>
-                                <th><span class="tooltip-trigger" data-bs-toggle="tooltip" title="Binding Affinity (More negative is better)">Docking</span></th>
-                                <th><span class="tooltip-trigger" data-bs-toggle="tooltip" title="Rule of 5 Violations (Target is 0)">Lipinski</span></th>
-                                <th>Actions</th>
+                                <th class="text-start">Compound</th>
+                                <th class="text-start">Predicted potency</th>
+                                <th><span class="tooltip-trigger" title="Quantitative Estimate of Druglikeness, 0 to 1">QED</span></th>
+                                <th><span class="tooltip-trigger" title="Lipinski Rule of 5 violations; 0 is ideal">Lipinski</span></th>
+                                <th>Docking</th>
+                                <th style="width: 13%;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for row in novels %}
                             <tr>
-                                <td class="fw-bold" style="color: #cbd5e1; font-size: 1.2rem;">#{{ loop.index }}</td>
+                                <td class="fw-bold" style="color: #cbd5e1; font-size: 1.1rem;">{{ loop.index }}</td>
                                 <td>
                                     <div class="mol-img-container mx-auto">
-                                        <img src="data:image/png;base64,{{ row.Image_Base64 }}">
+                                        <canvas class="mol-canvas" data-smiles="{{ row.clean_smiles }}" width="120" height="60"></canvas>
                                     </div>
                                 </td>
-                                <td class="text-start" style="width: 28%;">
+                                <td class="text-start fw-semibold">{{ row.Molecule_Name }}</td>
+                                <td class="text-start" style="width: 20%;">
                                     <div class="d-flex justify-content-between align-items-end">
-                                        <span class="metric-mono">{{ row.Predicted_pIC50 | round(2) }}</span>
-                                        <span class="metric-sub">{{ row.IC50_nM | round(2) }} nM</span>
+                                        <span class="metric-mono">{{ row.Predicted_pIC50 }}</span>
+                                        <span class="metric-sub">{{ row.IC50_nM }} nM</span>
                                     </div>
-                                    <div class="score-bar-bg"><div class="score-bar-fill" style="width: {{ (row.Predicted_pIC50 / 10) * 100 }}%;"></div></div>
+                                    <div class="score-bar-bg"><div class="score-bar-fill" style="width: {{ [row.Predicted_pIC50 * 10, 100] | min }}%;"></div></div>
+                                    <span class="metric-sub">pIC50</span>
                                 </td>
-                                <td><span class="docking-score">{{ row.Docking_Score }}</span></td>
+                                <td><span class="badge-qed {% if row.ADMET_QED and row.ADMET_QED >= 0.5 %}high{% endif %}">{{ row.ADMET_QED }}</span></td>
                                 <td>
-                                    {% if row.Violations > 0 %}
-                                        <span class="badge bg-danger rounded-pill px-3">{{ row.Violations }}</span>
+                                    {% if row.Violations %}
+                                    <span class="badge bg-danger rounded-pill px-3" title="{{ row.Lipinski_Reasons }}">{{ row.Violations }}</span>
                                     {% else %}
-                                        <span class="badge bg-light text-success border border-success rounded-pill px-3"><i class="fa-solid fa-check me-1"></i>0</span>
+                                    <span class="badge bg-light text-success border border-success rounded-pill px-3"><i class="fa-solid fa-check me-1"></i>0</span>
                                     {% endif %}
                                 </td>
-                                <td style="width: 15%;">
-                                    <button class="btn-action btn-dock" onclick="simulateDockingView()">
-                                        <i class="fa-solid fa-bullseye me-1"></i> Dock
+                                <td class="dock-score" id="dock-result-{{ loop.index }}"><span class="text-muted small">not run</span></td>
+                                <td>
+                                    <button class="btn-action btn-dock"
+                                            data-smiles="{{ row.clean_smiles }}"
+                                            data-name="{{ row.Molecule_Name }}"
+                                            data-row="{{ loop.index }}"
+                                            onclick="runDocking(this)">
+                                        <i class="fa-solid fa-bullseye me-1"></i>Dock
                                     </button>
-                                    <button class="btn-action btn-md" onclick="runMDSimulation('{{ target_pdb }}', '{{ row.clean_smiles }}', 'Candidate #{{ loop.index }}')">
-                                        <i class="fa-solid fa-atom me-1"></i> 10ns MD
-                                    </button>
-                                    <a href="{{ row.PubChem_Link }}" target="_blank" class="btn-action btn-pubchem">
-                                        <i class="fa-solid fa-database me-1"></i> PubChem
+                                    <a href="{{ row.PubChem_Link }}" target="_blank" rel="noopener" class="btn-action btn-pubchem">
+                                        <i class="fa-solid fa-database me-1"></i>PubChem
                                     </a>
                                 </td>
                             </tr>
@@ -227,134 +208,222 @@
                         </tbody>
                     </table>
                 </div>
+                <p class="method-note mb-0">
+                    Docking takes roughly 10&ndash;90 seconds per molecule and runs only when you ask for it.
+                </p>
+            </div>
+            {% endif %}
+
+            {% if refs %}
+            <div class="panel mb-0">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="m-0"><i class="fa-solid fa-check-double me-2 text-success"></i>Known inhibitors for comparison</h5>
+                    <span class="badge bg-light text-muted border px-3 py-2 rounded-pill">{{ reference_source }}</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover align-middle text-center">
+                        <thead>
+                            <tr>
+                                <th>Structure</th>
+                                <th class="text-start">Compound</th>
+                                <th class="text-start">Predicted potency</th>
+                                <th>QED</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in refs %}
+                            <tr>
+                                <td>
+                                    <div class="mol-img-container mx-auto">
+                                        <canvas class="mol-canvas" data-smiles="{{ row.clean_smiles }}" width="120" height="60"></canvas>
+                                    </div>
+                                </td>
+                                <td class="text-start fw-semibold">{{ row.Molecule_Name }}</td>
+                                <td class="text-start" style="width: 28%;">
+                                    <div class="d-flex justify-content-between align-items-end">
+                                        <span class="metric-mono">{{ row.Predicted_pIC50 }}</span>
+                                        <span class="metric-sub">{{ row.IC50_nM }} nM</span>
+                                    </div>
+                                    <div class="score-bar-bg"><div class="score-bar-fill" style="width: {{ [row.Predicted_pIC50 * 10, 100] | min }}%;"></div></div>
+                                </td>
+                                <td><span class="badge-qed {% if row.ADMET_QED and row.ADMET_QED >= 0.5 %}high{% endif %}">{{ row.ADMET_QED }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="method-note mb-0">
+                    These are measured inhibitors of this isoform. The model never saw your candidates,
+                    but it was trained on data that includes compounds like these, so treat a high score
+                    on a known drug as a sanity check rather than a discovery.
+                </p>
             </div>
             {% endif %}
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="mdModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+<div class="modal fade" id="dockModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%); color: white; border-radius: 16px 16px 0 0;">
-        <h5 class="modal-title fw-bold"><i class="fa-solid fa-microscope me-2"></i>MD Trajectory Analysis</h5>
+      <div class="modal-header" style="background: linear-gradient(135deg, #065f46 0%, #10b981 100%); color: white; border-radius: 16px 16px 0 0;">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-bullseye me-2"></i>Docking result</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body p-4 text-center">
-        
-        <div id="mdLoadingState">
-            <div class="spinner-border mb-3" style="width: 3rem; height: 3rem; color: #8b5cf6;" role="status"></div>
-            <h5 class="fw-bold text-dark">Running 10ns Simulation...</h5>
-            <p class="text-muted small">Solving Newton's equations of motion. Calculating MM-PBSA free energy...</p>
+      <div class="modal-body p-4">
+        <div id="dockLoading" class="text-center py-4">
+            <div class="spinner-border mb-3" style="width: 3rem; height: 3rem; color: #10b981;" role="status"></div>
+            <h5 class="fw-bold">Docking <span id="dockMolName"></span>…</h5>
+            <p class="text-muted small mb-0">AutoDock Vina with the AutoDock4Zn force field. This usually takes 10&ndash;90 seconds.</p>
         </div>
-
-        <div id="mdResultsState" style="display: none;">
-            <h5 class="fw-bold mb-1" id="mdMolName">Candidate</h5>
-            <p class="text-muted small mb-4">Target: <span id="mdTarget" class="badge bg-primary"></span> | Engine: OpenMM 8.0</p>
-            
-            <div class="row g-3 text-start">
-                <div class="col-6">
-                    <div class="p-3 bg-light rounded border">
-                        <div class="text-muted small fw-bold text-uppercase mb-1">MM-PBSA Energy</div>
-                        <div class="fs-4 fw-bold" style="color: #059669;" id="mdEnergy"></div>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="p-3 bg-light rounded border">
-                        <div class="text-muted small fw-bold text-uppercase mb-1">Avg RMSD</div>
-                        <div class="fs-4 fw-bold text-primary" id="mdRmsd"></div>
-                    </div>
-                </div>
-                <div class="col-12">
-                    <div class="p-3 bg-light rounded border d-flex justify-content-between align-items-center">
-                        <span class="text-muted small fw-bold text-uppercase">Persistent H-Bonds</span>
-                        <span class="fs-5 fw-bold text-dark" id="mdHbonds"></span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mt-3 alert alert-success py-2 m-0 border-0 bg-success bg-opacity-10 text-success fw-bold">
-                <i class="fa-solid fa-check-circle me-1"></i> Complex highly stable over 10ns
-            </div>
-
-            <div class="mt-4">
-                <a id="downloadXtcBtn" href="#" class="btn w-100 fw-bold shadow-sm" style="background-color: #8b5cf6; color: white; padding: 10px; border-radius: 8px;">
-                    <i class="fa-solid fa-download me-2"></i> Download Trajectory (.xtc)
-                </a>
-                <p class="text-muted small mt-2 mb-0"><i class="fa-solid fa-circle-info me-1"></i>Open this file in PyMOL or VMD to view the 3D simulation video.</p>
+        <div id="dockError" class="alert alert-warning d-none mb-0"></div>
+        <div id="dockResults" class="d-none">
+            <p class="mb-3">
+                <span class="fw-bold" id="dockResultName"></span>
+                against <span class="badge bg-primary" id="dockTarget"></span>
+                <span class="text-muted small" id="dockIsoform"></span>
+            </p>
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr class="text-muted small text-uppercase">
+                        <th>Pose</th>
+                        <th>Score (kcal/mol)</th>
+                        <th>Sulfonamide N &ndash; Zn</th>
+                        <th>Zinc contact</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="dockPoseRows"></tbody>
+            </table>
+            <div class="method-note">
+                A lower score means tighter predicted binding. Sulfonamide inhibitors bind carbonic
+                anhydrase by coordinating the active-site zinc, so a pose without that contact is
+                probably not the real binding mode even when it scores well. In our validation on
+                3HS4, the near-native pose (1.6&nbsp;&#8491; from the crystal structure) ranked second,
+                not first &mdash; so check the poses, not just the top score.
             </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Initialize Bootstrap Tooltips
-    document.addEventListener("DOMContentLoaded", function(){
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        })
+    // 2D structures are drawn in the browser: RDKit's depiction module needs X11
+    // system libraries that are not available in the serverless runtime.
+    const drawer = new SmilesDrawer.Drawer({ width: 120, height: 60, bondThickness: 0.9, padding: 2 });
+    document.querySelectorAll('canvas.mol-canvas').forEach((canvas) => {
+        SmilesDrawer.parse(canvas.dataset.smiles, (tree) => drawer.draw(tree, canvas, 'light'),
+            () => { canvas.replaceWith(Object.assign(document.createElement('span'),
+                { className: 'text-muted small', textContent: 'n/a' })); });
     });
 
-    // 3Dmol.js Initialization
-    let viewer = $3Dmol.createViewer("container-01", {backgroundColor: "#f8fafc"});
-    let pdbId = "{{ target_pdb }}";
+    const targetSelect = document.getElementById('targetSelect');
+    let viewer = $3Dmol.createViewer("viewer", { backgroundColor: "#f8fafc" });
+    let lastPose = null;
 
-    if (pdbId) {
-        $3Dmol.download("pdb:" + pdbId, viewer, {doAssembly: true, noSecondaryStructure: false}, function() {
-            viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
-            viewer.zoomTo();
+    function styleReceptor() {
+        viewer.setStyle({}, { cartoon: { color: 'spectrum', opacity: 0.85 } });
+        viewer.setStyle({ resn: 'ZN' }, { sphere: { radius: 1.1, color: '#94a3b8' } });
+    }
+
+    function loadReceptor(pdbId) {
+        viewer.clear();
+        lastPose = null;
+        $3Dmol.download("pdb:" + pdbId, viewer, {}, function () {
+            styleReceptor();
+            viewer.zoomTo({ resn: 'ZN' });
+            viewer.zoom(0.35);
             viewer.render();
         });
     }
 
-    // Docking Simulation Visuals
-    function simulateDockingView() {
-        document.querySelector("#container-01").previousElementSibling.innerHTML = 
-            "<h5 class='fw-bold m-0 text-success'><i class='fa-solid fa-microscope me-2'></i>Docking Analysis Active</h5><span class='badge bg-success fs-6 px-3 py-2 rounded-pill shadow-sm'>" + pdbId + "</span>";
-        
-        viewer.setStyle({}, {cartoon: {color: '#cbd5e1', style: 'oval'}}); 
-        viewer.setStyle({resi: ["94", "96", "119"]}, {stick: {colorscheme: "greenCarbon", radius: 0.25}});
-        viewer.addSurface($3Dmol.SurfaceType.VDW, {opacity: 0.5, color: '#4ade80'}, {resi: ["94", "96", "119"]}); 
-        viewer.zoomTo({resi: ["94", "96", "119"]});
+    loadReceptor("{{ target_pdb }}");
+    targetSelect.addEventListener('change', (e) => loadReceptor(e.target.value));
+
+    function showPose(pdbqt, label) {
+        if (lastPose !== null) viewer.removeModel(lastPose);
+        lastPose = viewer.addModel(pdbqt, "pdb");
+        viewer.setStyle({ model: lastPose }, { stick: { colorscheme: 'greenCarbon', radius: 0.22 } });
+        styleReceptor();
+        viewer.zoomTo({ resn: 'ZN' });
+        viewer.zoom(0.3);
         viewer.render();
+        document.getElementById('viewerCaption').textContent =
+            'Showing ' + label + ' in the active site. The zinc ion is the grey sphere.';
+        bootstrap.Modal.getInstance(document.getElementById('dockModal')).hide();
+        document.getElementById('viewer').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    // Handles the asynchronous MD API call
-    function runMDSimulation(pdbId, smiles, molName) {
-        // Show the modal and reset to loading state
-        const mdModal = new bootstrap.Modal(document.getElementById('mdModal'));
-        document.getElementById('mdLoadingState').style.display = 'block';
-        document.getElementById('mdResultsState').style.display = 'none';
-        mdModal.show();
+    async function runDocking(button) {
+        const { smiles, name, row } = button.dataset;
+        const targetPdb = targetSelect.value;
 
-        // Call our Flask /run_md route in the background
-        fetch('/run_md', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pdb_id: pdbId, smiles: smiles, molecule_name: molName })
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Hide loading, show results
-            document.getElementById('mdLoadingState').style.display = 'none';
-            document.getElementById('mdResultsState').style.display = 'block';
-            
-            // Populate the UI with the physics metrics
-            document.getElementById('mdMolName').innerText = data.molecule_name;
-            document.getElementById('mdTarget').innerText = data.target;
-            document.getElementById('mdEnergy').innerText = data.mm_pbsa_kcal_mol + ' kcal';
-            document.getElementById('mdRmsd').innerText = data.avg_rmsd_angstroms + ' Å';
-            document.getElementById('mdHbonds').innerText = data.persistent_h_bonds;
+        const modal = new bootstrap.Modal(document.getElementById('dockModal'));
+        document.getElementById('dockMolName').textContent = name;
+        document.getElementById('dockLoading').classList.remove('d-none');
+        document.getElementById('dockResults').classList.add('d-none');
+        document.getElementById('dockError').classList.add('d-none');
+        modal.show();
 
-            // NEW: Update the Download Button Link dynamically!
-            document.getElementById('downloadXtcBtn').href = `/download_trajectory/${data.molecule_name}`;
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert("MD Simulation failed to connect to engine.");
-            mdModal.hide();
-        });
+        button.disabled = true;
+        const cell = document.getElementById('dock-result-' + row);
+        cell.innerHTML = '<span class="text-muted small">running…</span>';
+
+        try {
+            const response = await fetch('/dock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ smiles, target_pdb: targetPdb })
+            });
+            const data = await response.json();
+            document.getElementById('dockLoading').classList.add('d-none');
+
+            if (!response.ok) {
+                document.getElementById('dockError').textContent = data.error || 'Docking failed.';
+                document.getElementById('dockError').classList.remove('d-none');
+                cell.innerHTML = '<span class="text-danger small">failed</span>';
+                return;
+            }
+
+            document.getElementById('dockResultName').textContent = name;
+            document.getElementById('dockTarget').textContent = data.target_pdb;
+            document.getElementById('dockIsoform').textContent = '(' + data.isoform + ')';
+
+            const rows = document.getElementById('dockPoseRows');
+            rows.innerHTML = '';
+            data.poses.forEach((pose) => {
+                const tr = document.createElement('tr');
+                const contact = pose.zinc_contact
+                    ? '<span class="badge bg-success">yes</span>'
+                    : (pose.zinc_distance === null
+                        ? '<span class="text-muted small">no sulfonamide</span>'
+                        : '<span class="badge bg-secondary">no</span>');
+                tr.innerHTML =
+                    '<td class="fw-bold">' + pose.rank + '</td>' +
+                    '<td class="dock-score">' + pose.score.toFixed(2) + '</td>' +
+                    '<td>' + (pose.zinc_distance === null ? '&mdash;' : pose.zinc_distance.toFixed(2) + ' &#8491;') + '</td>' +
+                    '<td>' + contact + '</td>' +
+                    '<td><button class="btn btn-sm btn-outline-primary">View in 3D</button></td>';
+                tr.querySelector('button').addEventListener('click',
+                    () => showPose(pose.pose_pdbqt, name + ' pose ' + pose.rank));
+                rows.appendChild(tr);
+            });
+            document.getElementById('dockResults').classList.remove('d-none');
+
+            const best = data.poses[0];
+            const contactNote = data.poses.some((p) => p.zinc_contact) ? '' : ' <span class="text-muted small">(no Zn contact)</span>';
+            cell.innerHTML = best.score.toFixed(2) + contactNote;
+        } catch (err) {
+            document.getElementById('dockLoading').classList.add('d-none');
+            document.getElementById('dockError').textContent = 'Could not reach the docking service.';
+            document.getElementById('dockError').classList.remove('d-none');
+            cell.innerHTML = '<span class="text-danger small">failed</span>';
+        } finally {
+            button.disabled = false;
+        }
     }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

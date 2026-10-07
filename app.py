@@ -1,96 +1,114 @@
+"""Flask entrypoint. On Vercel the `app` object below is served as a function."""
 import os
-import pandas as pd
-from flask import Flask, render_template, request, jsonify
-from src.pipeline.predict_pipeline import VirtualScreeningPipeline
-from src.pipeline.md_engine import MDEngine
-from flask import send_file
-import io
 
-# 1. Initialize the Flask App FIRST
+from flask import Flask, jsonify, render_template, request
+
+from src.logger import logging
+from src.pipeline import predict_pipeline
+from src.pipeline.docking_engine import get_engine
+from src.pipeline.targets import DEFAULT_TARGET, TARGETS
+
 app = Flask(__name__)
 
-# 2. Home Route
-@app.route('/', methods=['GET'])
-def home():
-    return render_template('home.html', refs=None, novels=None, target_pdb="5FL6", error=None)
+# Clearly-labelled starting set: approved CA inhibitors plus a few non-binders,
+# so a first-time visitor can see the model separate them.
+EXAMPLE_CANDIDATES = [
+    ("Acetazolamide (approved)", "CC(=O)Nc1nnc(s1)S(=O)(=O)N"),
+    ("Ethoxzolamide (approved)", "CCOc1ccc2nc(S(N)(=O)=O)sc2c1"),
+    ("SLC-0111 (in trials)", "O=C(Nc1ccc(F)cc1)Nc1ccc(S(N)(=O)=O)cc1"),
+    ("Celecoxib (off-target binder)", "Cc1ccc(-c2cc(C(F)(F)F)nn2-c2ccc(S(N)(=O)=O)cc2)cc1"),
+    ("Ibuprofen (non-binder)", "CC(C)Cc1ccc(C(C)C(=O)O)cc1"),
+    ("Caffeine (non-binder)", "Cn1cnc2c1c(=O)n(C)c(=O)n2C"),
+]
 
-# 3. Virtual Screening Route
-@app.route('/predict', methods=['POST'])
-def predict():
-    try:
-        query = request.form.get('search_query', '').strip()
-        target_pdb = "3HS4"
-        raw_smiles = []
 
-        if len(query) == 4 and query.isalnum():
-            target_pdb = query.upper()
-            raw_smiles = [
-                'O=S(=O)(N)c1ccc(cc1)C(=O)O', 'CC(=O)Oc1ccccc1C(=O)O', 
-                'Cc1nnc(S(=O)(=O)N)s1', 'O=C(NO)c1ccc(S(=O)(=O)N)cc1',
-                'NS(=O)(=O)c1ccc(NC(=O)c2ccccc2)cc1', 
-                'CC[C@H]1OC(=O)[C@H](C)[C@@H](O[C@H]2C[C@@](C)(OC)[C@@H](O)[C@H](C)O2)[C@H](C)[C@@H](O[C@@H]3O[C@H](C)C[C@@H](N(C)C)[C@H]3O)[C@H](C)C[C@@](C)(O)[C@H](O)[C@H](C)C(=O)[C@@H](C)[C@@H]1O',
-                'CN1C=NC2=C1C(=O)N(C(=O)N2C)C', 'CC1(C(N2C(S1)C(C2=O)NC(=O)C(C3=CC=CC=C3)N)C(=O)O)C',
-                'CC1=C(C=C(C=C1)NC(=O)C2=CC=C(C=C2)CN3CCN(CC3)C)NC4=NC=CC(=N4)C5=CN=CC=C5',
-                'C1=CC=C(C=C1)C2=CC(=O)C3=C(C=CC(=C3O2)O)O', 'CC(C)CC1=CC=C(C=C1)C(C)C(=O)O',
-                'CC1=CN=C(C(=C1OC)C)CS(=O)C2=NC3=C(N2)C=C(C=C3)OC'
-            ]
+def parse_candidates(raw):
+    """Splits a textarea of SMILES (one per line, optional `name, smiles`)."""
+    candidates = []
+    for line in raw.replace("\r", "").split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        if "," in line:
+            name, _, smiles = line.rpartition(",")
+            name, smiles = name.strip(), smiles.strip()
         else:
-            raw_smiles = [s.strip() for s in query.replace(',', '\n').split('\n') if s.strip()]
+            name, smiles = "", line
+        candidates.append({
+            "Molecule_Name": name or f"Candidate {len(candidates) + 1}",
+            "clean_smiles": smiles,
+        })
+    return candidates
 
-        if not raw_smiles:
-            return render_template('home.html', refs=None, novels=None, target_pdb=target_pdb, error="Please enter valid SMILES or a PDB ID.")
 
-        user_mol_names = [f"Novel_Candidate_{i+1}" for i in range(len(raw_smiles))]
-        pool_df = pd.DataFrame({'Molecule_Name': user_mol_names, 'clean_smiles': raw_smiles, 'Source': ['User Input'] * len(raw_smiles)})
-
-        pipeline = VirtualScreeningPipeline()
-        ref_df, novel_df = pipeline.run_screening(pool_df, pdb_id=target_pdb)
-        
-        return render_template('home.html', refs=ref_df.to_dict('records'), novels=novel_df.to_dict('records'), target_pdb=target_pdb, error=None)
-
-    except Exception as e:
-        return render_template('home.html', refs=None, novels=None, target_pdb="3HS4", error=str(e))
-
-# 4. Asynchronous MD Simulation Route
-@app.route('/run_md', methods=['POST'])
-def run_md():
-    """Asynchronous route to handle 10ns Molecular Dynamics requests."""
-    try:
-        data = request.get_json()
-        molecule_name = data.get('molecule_name', 'Unknown')
-        smiles = data.get('smiles', '')
-        pdb_id = data.get('pdb_id', '5FL6')
-
-        print(f"🧬 Kicking off 10ns MD Simulation for {molecule_name} against {pdb_id}...")
-        
-        md = MDEngine(simulation_time_ns=10)
-        results = md.run_10ns_simulation(pdb_id, smiles, molecule_name)
-        
-        return jsonify(results)
-
-    except Exception as e:
-        print(f"❌ MD Error: {e}")
-        return jsonify({"status": "Error", "message": str(e)}), 500
-
-# ... [Keep your other routes here] ...
-
-@app.route('/download_trajectory/<molecule_name>')
-def download_trajectory(molecule_name):
-    """
-    Simulates downloading a large .xtc trajectory file.
-    In production, this would serve the actual GROMACS/OpenMM output file from an S3 bucket.
-    """
-    # Create a dummy binary file in memory for the portfolio demonstration
-    dummy_data = b"MD_TRAJECTORY_DATA_STUB... [In production, this contains millions of atomic coordinate frames]"
-    
-    # Send the file to the user's browser as a download
-    return send_file(
-        io.BytesIO(dummy_data),
-        as_attachment=True,
-        download_name=f"{molecule_name.replace(' ', '_')}_10ns_sim.xtc",
-        mimetype="application/octet-stream"
+@app.route("/")
+def home():
+    return render_template(
+        "home.html",
+        targets=TARGETS,
+        target_pdb=DEFAULT_TARGET,
+        examples=EXAMPLE_CANDIDATES,
+        smiles_input="\n".join(f"{name}, {smiles}" for name, smiles in EXAMPLE_CANDIDATES),
     )
 
-# 5. Run the Server
+
+@app.route("/predict", methods=["POST"])
+def predict():
+    target_pdb = request.form.get("target_pdb", DEFAULT_TARGET).upper()
+    smiles_input = request.form.get("smiles_input", "")
+
+    page = {
+        "targets": TARGETS,
+        "target_pdb": target_pdb if target_pdb in TARGETS else DEFAULT_TARGET,
+        "examples": EXAMPLE_CANDIDATES,
+        "smiles_input": smiles_input,
+    }
+    if target_pdb not in TARGETS:
+        return render_template("home.html", **page, error=f"Unsupported target {target_pdb}.")
+
+    candidates = parse_candidates(smiles_input)
+    if not candidates:
+        return render_template("home.html", **page, error="Enter at least one SMILES string.")
+
+    try:
+        refs, novels, reference_source, skipped = predict_pipeline.screen(candidates, target_pdb)
+    except Exception:
+        logging.exception("screening failed")
+        return render_template("home.html", **page, error="Screening failed. Please try again.")
+
+    return render_template(
+        "home.html", **page, refs=refs, novels=novels,
+        reference_source=reference_source, skipped=skipped,
+    )
+
+
+@app.route("/dock", methods=["POST"])
+def dock():
+    """Docks one molecule. Slow (tens of seconds), so the UI calls it per row."""
+    data = request.get_json(silent=True) or {}
+    target_pdb = str(data.get("target_pdb", "")).upper()
+    smiles = str(data.get("smiles", "")).strip()
+
+    if target_pdb not in TARGETS:
+        return jsonify({"error": f"Unsupported target {target_pdb}."}), 400
+    if not smiles:
+        return jsonify({"error": "No SMILES provided."}), 400
+
+    try:
+        result = get_engine(target_pdb).dock(smiles)
+    except Exception:
+        logging.exception(f"docking failed for {smiles!r} against {target_pdb}")
+        return jsonify({"error": "Docking failed."}), 500
+
+    if "error" in result:
+        return jsonify(result), 422
+    return jsonify({
+        **result,
+        "target_pdb": target_pdb,
+        "isoform": TARGETS[target_pdb]["isoform"],
+        "scoring": "AutoDock4Zn",
+    })
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", 5000)), debug=True)

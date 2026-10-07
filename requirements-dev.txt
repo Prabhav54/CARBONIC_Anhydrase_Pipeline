@@ -1,0 +1,26 @@
+-r requirements.txt
+
+# Training the models and exporting them for serving.
+scikit-learn==1.8.0
+tensorflow-cpu==2.20.0
+joblib==1.5.1
+h5py==3.14.0
+pandas==2.3.1
+xgboost==3.0.2
+
+# Data curation: ChEMBL/PDB fetching, EDA, notebooks.
+biopython==1.85
+chembl_webresource_client==0.10.9
+matplotlib==3.10.3
+seaborn==0.13.2
+jupyter==1.1.1
+py3Dmol==2.5.0
+
+# Receptor and map preparation also need the `obabel` CLI and `autogrid4`
+# (conda-forge: `openbabel`, `autogrid`), which are not pip-installable.
+
+# Validation against the reference implementations.
+meeko==0.8.0
+scipy==1.16.1
+gemmi==0.7.3
+pytest==8.4.1

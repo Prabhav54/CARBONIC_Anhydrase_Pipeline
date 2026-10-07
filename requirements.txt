@@ -1,11 +1,7 @@
-pandas
-numpy
-requests
-biopython
-chembl_webresource_client
-pydantic
-scikit-learn
-rdkit
-seaborn
-matplotlib
-XGBoost
+# Runtime dependencies only (what the Vercel function needs).
+# Development/training extras live in requirements-dev.txt.
+flask==3.1.0
+numpy==2.2.6
+rdkit==2025.3.6
+requests==2.32.4
+vina==1.2.7

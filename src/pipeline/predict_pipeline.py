@@ -1,160 +1,122 @@
-import sys
-import requests
-import os
-import pandas as pd
-import numpy as np
-import base64
-import urllib.parse
-from io import BytesIO
-import joblib
-from tensorflow.keras.models import load_model
-from rdkit import Chem
-from rdkit.Chem import Draw, Descriptors, Lipinski, QED
+"""Virtual screening: predict potency and drug-likeness for a pool of molecules.
 
-from src.exception import CustomException
-from src.components.data_transformation import DataTransformation
-from src.pipeline.docking_engine import DockingEngine
+Docking is deliberately not part of this step. It takes tens of seconds per
+molecule, so the app runs it on demand through src.pipeline.docking_engine.
+"""
+import urllib.parse
+
+import requests
+
+from src.logger import logging
+from src.pipeline import admet_engine
+from src.pipeline.potency_model import get_model, fingerprints
+from src.pipeline.targets import DEFAULT_TARGET, TARGETS
+
+CHEMBL_API = "https://www.ebi.ac.uk/chembl/api/data"
+CHEMBL_TIMEOUT = 5
+MAX_REFERENCE_DRUGS = 6
+
+# Used when the ChEMBL API cannot be reached.
+FALLBACK_DRUGS = [
+    {"Molecule_Name": "Acetazolamide", "clean_smiles": "CC(=O)Nc1nnc(s1)S(=O)(=O)N"},
+    {"Molecule_Name": "Methazolamide", "clean_smiles": "CC(=O)/N=c1/sc(S(N)(=O)=O)nn1C"},
+    {"Molecule_Name": "Dorzolamide", "clean_smiles": "CCN[C@H]1C[C@@H](C)S(=O)(=O)c2sc(cc12)S(N)(=O)=O"},
+    {"Molecule_Name": "Brinzolamide", "clean_smiles": "CCN[C@H]1CN(CCCOC)S(=O)(=O)c2sc(cc12)S(N)(=O)=O"},
+    {"Molecule_Name": "Ethoxzolamide", "clean_smiles": "CCOc1ccc2nc(S(N)(=O)=O)sc2c1"},
+]
+
+
+def resolve_target(query):
+    """Maps a user-typed PDB ID to a supported target, or None if unsupported."""
+    return query.strip().upper() if query.strip().upper() in TARGETS else None
+
+
+def pubchem_link(smiles):
+    return f"https://pubchem.ncbi.nlm.nih.gov/#query={urllib.parse.quote(smiles)}"
+
+
+def fetch_reference_drugs(pdb_id):
+    """Known inhibitors of this target's isoform, from ChEMBL's mechanism data."""
+    chembl_id = TARGETS[pdb_id]["chembl_id"]
+    try:
+        mechanisms = requests.get(
+            f"{CHEMBL_API}/mechanism.json",
+            params={"target_chembl_id": chembl_id, "limit": 50},
+            timeout=CHEMBL_TIMEOUT,
+        ).json()
+        molecule_ids = sorted({m["molecule_chembl_id"] for m in mechanisms.get("mechanisms", [])})
+        if not molecule_ids:
+            raise ValueError(f"ChEMBL lists no mechanisms for {chembl_id}")
+
+        molecules = requests.get(
+            f"{CHEMBL_API}/molecule.json",
+            params={"molecule_chembl_id__in": ",".join(molecule_ids[:MAX_REFERENCE_DRUGS])},
+            timeout=CHEMBL_TIMEOUT,
+        ).json()
+
+        drugs = []
+        for molecule in molecules.get("molecules", []):
+            smiles = (molecule.get("molecule_structures") or {}).get("canonical_smiles")
+            if not smiles:
+                continue
+            name = molecule.get("pref_name") or molecule["molecule_chembl_id"]
+            drugs.append({"Molecule_Name": name.title(), "clean_smiles": smiles})
+        if not drugs:
+            raise ValueError("no ChEMBL molecule had a structure")
+        logging.info(f"fetched {len(drugs)} reference drugs for {chembl_id}")
+        return drugs, "ChEMBL API"
+    except Exception as e:
+        logging.warning(f"ChEMBL lookup failed for {chembl_id}: {e}")
+        return list(FALLBACK_DRUGS), "offline reference set"
+
+
+def screen(candidates, pdb_id=DEFAULT_TARGET):
+    """Scores candidates and reference drugs.
+
+    `candidates` is a list of {'Molecule_Name', 'clean_smiles'}.
+    Returns (references, novels, reference_source, skipped) with both lists
+    ranked by predicted potency.
+    """
+    references, reference_source = fetch_reference_drugs(pdb_id)
+    pool = [dict(c, is_novel=True) for c in candidates] + [dict(r, is_novel=False) for r in references]
+
+    seen, unique = set(), []
+    for entry in pool:
+        if entry["clean_smiles"] not in seen:
+            seen.add(entry["clean_smiles"])
+            unique.append(entry)
+
+    X, valid = fingerprints([e["clean_smiles"] for e in unique])
+    skipped = [unique[i]["Molecule_Name"] for i in range(len(unique)) if i not in set(valid)]
+    if not valid:
+        return [], [], reference_source, skipped
+
+    predictions = get_model().predict(X)
+
+    rows = []
+    for position, index in enumerate(valid):
+        entry = unique[index]
+        smiles = entry["clean_smiles"]
+        pic50 = float(predictions[position])
+        admet = admet_engine.evaluate(smiles) or {}
+        rows.append({
+            **entry,
+            "Predicted_pIC50": round(pic50, 2),
+            "IC50_nM": round(10 ** (9 - pic50), 2),
+            "ADMET_QED": admet.get("QED"),
+            "Violations": admet.get("Violations"),
+            "Lipinski_Reasons": admet.get("Reasons"),
+            "PubChem_Link": pubchem_link(smiles),
+        })
+
+    rows.sort(key=lambda r: r["Predicted_pIC50"], reverse=True)
+    novels = [r for r in rows if r["is_novel"]]
+    refs = [r for r in rows if not r["is_novel"]]
+    return refs, novels, reference_source, skipped
+
 
 class VirtualScreeningPipeline:
-    def __init__(self):
-        self.scaler_path = os.path.join("artifacts", "scaler.pkl")
-        self.rf_path = os.path.join("artifacts", "best_ml_model.pkl")
-        self.lstm_path = os.path.join("artifacts", "dnn_model.h5")
-        self.docker = DockingEngine() 
+    """Kept for backwards compatibility with earlier notebooks."""
 
-    def fetch_chembl_drugs(self, pdb_id):
-        """Dynamically fetches known inhibitors from the ChEMBL API based on PDB ID."""
-        print(f"🌐 Querying ChEMBL Database for target {pdb_id}...")
-        
-        # Offline fallback just in case the user has no internet or the API is down
-        fallback_drugs = [
-            {'Molecule_Name': 'Acetazolamide', 'clean_smiles': 'CC(=O)Nc1nnc(s1)S(=O)(=O)N', 'Source': 'Offline Fallback'},
-            {'Molecule_Name': 'Dorzolamide', 'clean_smiles': 'CCNC1CCS(=O)(=O)c2c1sc(c2)S(=O)(=O)N', 'Source': 'Offline Fallback'}
-        ]
-        
-        try:
-            # 1. Map PDB IDs to ChEMBL Target IDs (Carbonic Anhydrase Isoforms)
-            pdb_to_chembl = {
-                '1CA2': 'CHEMBL205', '3HS4': 'CHEMBL205', '4ZAO': 'CHEMBL205', # CA II (Glaucoma)
-                '3IAI': 'CHEMBL3105', '5FL4': 'CHEMBL3105', '5FL6': 'CHEMBL3105', # CA IX (Tumors)
-                '1JCZ': 'CHEMBL3124', '5JN9': 'CHEMBL3124' # CA XII (Cancer)
-            }
-            # Default to CA II if they type an unknown PDB
-            target_chembl_id = pdb_to_chembl.get(pdb_id.upper(), 'CHEMBL205') 
-            
-            # 2. Fetch drugs known to act on this specific target
-            moa_url = f"https://www.ebi.ac.uk/chembl/api/data/mechanism.json?target_chembl_id={target_chembl_id}"
-            moa_resp = requests.get(moa_url, timeout=5).json()
-            
-            # Extract unique molecule IDs (Limit to Top 6 to keep the UI clean)
-            mol_chembl_ids = list(set([m['molecule_chembl_id'] for m in moa_resp.get('mechanisms', [])]))[:6]
-            
-            if not mol_chembl_ids:
-                return pd.DataFrame(fallback_drugs)
-                
-            # 3. Fetch the actual SMILES and Names for these molecules from ChEMBL
-            mol_ids_str = ",".join(mol_chembl_ids)
-            mol_url = f"https://www.ebi.ac.uk/chembl/api/data/molecule.json?molecule_chembl_id__in={mol_ids_str}"
-            mol_resp = requests.get(mol_url, timeout=5).json()
-            
-            live_drugs = []
-            for mol in mol_resp.get('molecules', []):
-                smiles = mol.get('molecule_structures', {}).get('canonical_smiles')
-                pref_name = mol.get('pref_name')
-                chembl_id = mol.get('molecule_chembl_id')
-                
-                # Use the common name if available, otherwise use the ChEMBL ID
-                name = pref_name.title() if pref_name else chembl_id
-                
-                if smiles:
-                    live_drugs.append({
-                        'Molecule_Name': f"{name}",
-                        'clean_smiles': smiles,
-                        'Source': 'ChEMBL API'
-                    })
-                    
-            if live_drugs:
-                print("✅ Successfully fetched live data from ChEMBL!")
-                return pd.DataFrame(live_drugs)
-            else:
-                return pd.DataFrame(fallback_drugs)
-                
-        except Exception as e:
-            print(f"⚠️ ChEMBL API Error: {e}. Using offline fallback drugs.")
-            return pd.DataFrame(fallback_drugs)
-
-    def run_screening(self, pool_df, pdb_id="3HS4"):
-        try:
-            ref_df = self.fetch_chembl_drugs(pdb_id)
-            combined_pool = pd.concat([pool_df, ref_df], ignore_index=True)
-            combined_pool.drop_duplicates(subset=['clean_smiles'], inplace=True)
-            
-            scaler = joblib.load(self.scaler_path)
-            rf_model = joblib.load(self.rf_path)
-            lstm_model = load_model(self.lstm_path, compile=False) 
-            
-            dt = DataTransformation()
-            X_features, valid_idx = dt.get_fingerprints(combined_pool['clean_smiles'].tolist())
-            valid_df = combined_pool.iloc[valid_idx].reset_index(drop=True)
-            
-            # Predict Ensemble (0.7 RF + 0.3 LSTM)
-            rf_preds = rf_model.predict(X_features)
-            X_scaled = scaler.transform(X_features)
-            X_lstm = np.reshape(X_scaled, (X_scaled.shape[0], 1, X_scaled.shape[1]))
-            lstm_preds = lstm_model.predict(X_lstm, verbose=0).flatten()
-            
-            valid_df['Predicted_pIC50'] = (0.7 * rf_preds) + (0.3 * lstm_preds)
-            
-            # Split and rank
-            ref_results = valid_df[valid_df['Source'] != 'User Input'].sort_values(by='Predicted_pIC50', ascending=False).copy()
-            novel_results = valid_df[valid_df['Source'] == 'User Input'].sort_values(by='Predicted_pIC50', ascending=False).head(10).copy()
-
-            def format_output(row, is_novel=False):
-                smiles = row['clean_smiles']
-                pic50 = row['Predicted_pIC50']
-                mol = Chem.MolFromSmiles(smiles)
-                ic50_nm = (10 ** -pic50) * (10**9)
-                
-                # Dynamic PubChem Search URL
-                encoded_smiles = urllib.parse.quote(smiles)
-                pubchem_link = f"https://pubchem.ncbi.nlm.nih.gov/#query={encoded_smiles}"
-                
-                violations = 0
-                qed_score = 0.0
-                if mol:
-                    qed_score = QED.qed(mol)
-                    if Descriptors.MolWt(mol) > 500: violations += 1
-                    if Descriptors.MolLogP(mol) > 5: violations += 1
-                    if Lipinski.NumHDonors(mol) > 5: violations += 1
-                    if Lipinski.NumHAcceptors(mol) > 10: violations += 1
-                
-                try:
-                    img = Draw.MolToImage(mol, size=(180, 90))
-                    buffered = BytesIO()
-                    img.save(buffered, format="PNG")
-                    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                except:
-                    img_str = "Failed"
-                    
-                docking_score = "N/A"
-                if is_novel:
-                    dock_res = self.docker.dock_molecule(smiles, row['Molecule_Name'])
-                    if dock_res:
-                        docking_score = f"{dock_res['score']} kcal/mol"
-
-                return pd.Series({
-                    'IC50_nM': round(ic50_nm, 2), 
-                    'Image_Base64': img_str,
-                    'Violations': violations,
-                    'ADMET_QED': round(qed_score, 3),
-                    'Docking_Score': docking_score,
-                    'PubChem_Link': pubchem_link
-                })
-
-            formatted_refs = pd.concat([ref_results, ref_results.apply(lambda r: format_output(r, is_novel=False), axis=1)], axis=1)
-            formatted_novels = pd.concat([novel_results, novel_results.apply(lambda r: format_output(r, is_novel=True), axis=1)], axis=1)
-            
-            return formatted_refs, formatted_novels
-
-        except Exception as e:
-            raise CustomException(e, sys)
+    def run_screening(self, candidates, pdb_id=DEFAULT_TARGET):
+        return screen(candidates, pdb_id)
