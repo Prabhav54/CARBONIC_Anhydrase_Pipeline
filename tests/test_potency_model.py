@@ -118,3 +118,34 @@ def test_known_inhibitors_outrank_non_binders(model, X):
     sulfonamides = [predictions[s] for s in DRUGS[:3]]
     non_binders = [predictions[s] for s in DRUGS[3:]]
     assert min(sulfonamides) > max(non_binders), predictions
+
+
+def test_ranking_places_the_best_candidate_among_the_known_inhibitors():
+    """The headline comparison: where the best of yours falls among the knowns.
+
+    Both sides are model predictions, so the ranking is computed from
+    Predicted_pIC50 on both and nothing is compared against a measured value.
+    """
+    from src.pipeline.predict_pipeline import _ranking
+
+    novels = [{"name": "Mine", "score": 6.0, "Predicted_pIC50": 7.4},
+              {"name": "Weak", "score": 2.0, "Predicted_pIC50": 5.1}]
+    refs = [{"name": "A", "score": 9.9, "Predicted_pIC50": 9.2},
+            {"name": "B", "score": 8.0, "Predicted_pIC50": 8.1},
+            {"name": "C", "score": 3.0, "Predicted_pIC50": 6.0}]
+
+    ranking = _ranking(novels, refs)
+    assert ranking["name"] == "Mine"
+    assert ranking["rank"] == 3        # two knowns are stronger
+    assert ranking["of"] == 4          # itself plus the three knowns
+    assert ranking["beats"] == 1       # it is ahead of C
+    assert ranking["references"] == 3
+
+
+def test_ranking_is_withheld_when_there_is_nothing_to_compare():
+    from src.pipeline.predict_pipeline import _ranking
+
+    unscored = [{"name": "Mine", "score": None, "Predicted_pIC50": 7.4}]
+    scored = [{"name": "A", "score": 9.9, "Predicted_pIC50": 9.2}]
+    assert _ranking(unscored, scored) is None     # isoform has no score at all
+    assert _ranking(scored, []) is None           # no references retrieved

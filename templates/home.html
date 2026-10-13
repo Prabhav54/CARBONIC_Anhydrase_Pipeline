@@ -8,113 +8,120 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/smiles-drawer@2.1.7/dist/smiles-drawer.min.js" defer></script>
 <style>
-/* One accent (teal), one neutral family (warm grey), one radius scale:
-   12px panels, 8px inputs and tiles, 999px chips and buttons. */
+/* Indigo accent on a cool slate neutral. One accent only: indigo means "your
+   molecule, or the model's answer", slate means "reference", amber means "look
+   again". Radius scale: 14px panels, 8px tiles, 999px chips and buttons. */
 :root {
   color-scheme: light;
-  --bg: #f6f6f4;
+  --bg: #f3f4f8;
   --surface: #ffffff;
-  --surface-2: #fafaf8;
-  --surface-3: #f0efec;
-  --border: #e4e3df;
-  --border-strong: #cdcbc5;
-  --text: #1b1b19;
-  --text-2: #595852;
-  --text-3: #8a8982;
-  --accent: #0f766e;
+  --surface-2: #f8f9fc;
+  --surface-3: #ecedf4;
+  --border: #e3e5ee;
+  --border-strong: #c6c9d8;
+  --text: #14161f;
+  --text-2: #525868;
+  --text-3: #868b9d;
+  --accent: #4338ca;
   --accent-ink: #ffffff;
-  --accent-soft: #e2f0ee;
-  --accent-line: #9ccfc8;
-  --warn: #8a5a00;
-  --warn-soft: #fdf4e4;
-  --danger: #a3302a;
+  --accent-soft: #eceafc;
+  --accent-line: #c0baf3;
+  --accent-dim: #9b93ea;
+  --ref: #8a90a6;
+  --ref-soft: #eceef4;
+  --warn: #8a5a0a;
+  --warn-soft: #fdf3e3;
+  --danger: #a82b25;
   --danger-soft: #fbeceb;
-  --ok: #1f6d45;
-  --ok-soft: #e6f2ea;
-  --r-panel: 12px;
+  --ok: #0d6b4e;
+  --ok-soft: #e4f2ed;
+  --r-panel: 14px;
   --r-tile: 8px;
-  --shadow: 0 1px 2px rgba(27,27,25,.05), 0 10px 28px -14px rgba(27,27,25,.16);
+  --shadow: 0 1px 2px rgba(20,22,31,.04), 0 12px 30px -16px rgba(20,22,31,.18);
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --bg: #16161a;
-    --surface: #1e1e23;
-    --surface-2: #25252b;
-    --surface-3: #2c2c33;
-    --border: #32323a;
-    --border-strong: #46464f;
-    --text: #f2f1ef;
-    --text-2: #b5b4af;
-    --text-3: #8b8a83;
-    --accent: #4fb9ab;
-    --accent-ink: #10231f;
-    --accent-soft: #1b3734;
-    --accent-line: #2f5f59;
-    --warn: #e2b369;
-    --warn-soft: #30261a;
+    --bg: #0f1118;
+    --surface: #171a24;
+    --surface-2: #1d2130;
+    --surface-3: #252a3a;
+    --border: #2a2f41;
+    --border-strong: #3d4457;
+    --text: #eef0f7;
+    --text-2: #a9b0c4;
+    --text-3: #7c8299;
+    --accent: #a5a0f7;
+    --accent-ink: #15123a;
+    --accent-soft: #232051;
+    --accent-line: #413c86;
+    --accent-dim: #6f69c9;
+    --ref: #7d849b;
+    --ref-soft: #222734;
+    --warn: #e0b36b;
+    --warn-soft: #2e2519;
     --danger: #ec8d87;
-    --danger-soft: #3a1f1e;
-    --ok: #74c89a;
-    --ok-soft: #1c3328;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.55);
+    --danger-soft: #38201e;
+    --ok: #6fc8a1;
+    --ok-soft: #16332a;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 12px 30px -16px rgba(0,0,0,.6);
   }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
 .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
 a { color: var(--accent); text-underline-offset: 2px; }
-h1,h2,h3 { margin: 0; letter-spacing: -.012em; }
-h1 { font-size: 1.22rem; font-weight: 650; }
+h1,h2,h3 { margin: 0; letter-spacing: -.014em; }
+h1 { font-size: 1.2rem; font-weight: 650; }
 h2 { font-size: 1.02rem; font-weight: 620; }
-h3 { font-size: .82rem; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); }
+h3 { font-size: .72rem; font-weight: 650; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); }
 p { margin: 0; }
 .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .muted { color: var(--text-2); }
 .small { font-size: .82rem; }
 
 header.masthead { border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 30; }
-.masthead-inner { display: flex; align-items: center; gap: 13px; min-height: 60px; }
+.masthead-inner { display: flex; align-items: center; gap: 12px; min-height: 58px; }
 .mark { width: 28px; height: 28px; border-radius: var(--r-tile); background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font: 650 12px/1 var(--mono); flex: none; }
 .masthead p { color: var(--text-2); font-size: .82rem; }
 
-main { padding: 22px 0 72px; }
+main { padding: 22px 0 64px; }
 
-/* Step scaffolding: the numbered rail is the page's backbone. */
-.step { display: grid; grid-template-columns: 30px 1fr; gap: 14px; margin-bottom: 20px; }
+/* Numbered steps are the page's backbone. */
+.step { display: grid; grid-template-columns: 28px 1fr; gap: 14px; margin-bottom: 20px; }
 .step-rail { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.step-no { width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; font: 650 13px/1 var(--mono); border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-3); flex: none; }
+.step-no { width: 26px; height: 26px; border-radius: 999px; display: grid; place-items: center; font: 650 12px/1 var(--mono); border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-3); flex: none; }
 .step.done .step-no { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .step.active .step-no { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .step-line { flex: 1; width: 1px; background: var(--border); min-height: 10px; }
-.step-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 9px; }
-.step-head .hint { color: var(--text-3); font-size: .82rem; }
-.step.locked { opacity: .55; }
+.step-head { margin-bottom: 9px; }
+.step-head h2 { display: inline; }
+.step-head .hint { color: var(--text-3); font-size: .84rem; display: block; margin-top: 2px; max-width: 76ch; }
+.step.locked { opacity: .5; }
 @media (max-width: 700px) { .step { grid-template-columns: 1fr; } .step-rail { flex-direction: row; } .step-line { display: none; } }
 
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); box-shadow: var(--shadow); overflow: hidden; }
 .panel + .panel { margin-top: 14px; }
-.panel-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.panel-head .note { color: var(--text-3); font-size: .8rem; }
+.panel-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.panel-head .note { color: var(--text-3); font-size: .8rem; flex: 1; }
 .panel-body { padding: 16px; }
 .panel-split { border-top: 1px solid var(--border); }
 
 /* Inputs */
 .field { display: grid; gap: 6px; }
 label { font-size: .82rem; font-weight: 600; }
-.help { font-size: .78rem; color: var(--text-3); }
+.help { font-size: .79rem; color: var(--text-3); }
 input[type=text], textarea {
   width: 100%; padding: 10px 12px; background: var(--surface-2); color: var(--text);
   border: 1px solid var(--border-strong); border-radius: var(--r-tile); font: 14px/1.5 var(--sans);
 }
 input[type=text] { font-family: var(--mono); text-transform: uppercase; letter-spacing: .14em; font-size: 1rem; font-weight: 600; }
-textarea { font-family: var(--mono); font-size: 12.5px; min-height: 132px; resize: vertical; }
+textarea { font-family: var(--mono); font-size: 12.5px; min-height: 124px; resize: vertical; }
 input::placeholder, textarea::placeholder { color: var(--text-3); letter-spacing: normal; font-weight: 400; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-.row .field { flex: 1 1 200px; }
 
 button { font: 600 14px/1 var(--sans); border-radius: 999px; border: 1px solid transparent; padding: 11px 20px; cursor: pointer; transition: background-color .15s, border-color .15s, transform .08s; }
 button:active { transform: translateY(1px); }
@@ -124,6 +131,7 @@ button:active { transform: translateY(1px); }
 .btn-ghost:hover { background: var(--surface-2); border-color: var(--accent); }
 .btn-ghost[disabled] { opacity: .5; cursor: default; }
 .btn-ghost.on { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+.btn-link { background: none; border: 0; padding: 0; color: var(--accent); font-size: .79rem; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .suggest { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
 .suggest form { display: inline; }
 .suggest button { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); font: 600 12px/1 var(--mono); padding: 6px 11px; }
@@ -133,101 +141,140 @@ button:active { transform: translateY(1px); }
 /* Chips */
 .chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font: 600 11.5px/1.75 var(--sans); white-space: nowrap; border: 1px solid transparent; }
 .chip-accent { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
-.chip-ok { background: var(--ok-soft); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 28%, transparent); }
-.chip-warn { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 28%, transparent); }
+.chip-ok { background: var(--ok-soft); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 26%, transparent); }
+.chip-warn { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 26%, transparent); }
 .chip-plain { background: var(--surface-3); color: var(--text-2); border-color: var(--border); }
 .chip-lg { font-size: 12.5px; padding: 4px 11px; }
 
 .message { border-radius: var(--r-panel); padding: 13px 16px; font-size: .88rem; margin-bottom: 16px; }
-.message-error { background: var(--danger-soft); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); }
-.message-warn { background: var(--warn-soft); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 28%, transparent); }
+.message-error { background: var(--danger-soft); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent); }
+.message-warn { background: var(--warn-soft); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 26%, transparent); }
 
 /* Structure header */
-.structure-top { display: grid; grid-template-columns: 180px 1fr; gap: 16px; }
+.structure-top { display: grid; grid-template-columns: 164px 1fr; gap: 16px; }
 @media (max-width: 760px) { .structure-top { grid-template-columns: 1fr; } }
-.struct-img { width: 180px; height: 180px; border-radius: var(--r-tile); border: 1px solid var(--border); background: var(--surface-3); object-fit: cover; display: block; }
+.struct-img { width: 164px; height: 164px; border-radius: var(--r-tile); border: 1px solid var(--border); background: var(--surface-3); object-fit: cover; display: block; }
 .struct-id { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
 .struct-id .pdb { font: 650 1.5rem/1 var(--mono); letter-spacing: .02em; }
-.struct-title { color: var(--text-2); font-size: .88rem; margin-bottom: 10px; }
+.struct-title { color: var(--text-2); font-size: .87rem; margin-bottom: 10px; }
 .facts { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--border); border-radius: var(--r-tile); overflow: hidden; }
-.fact { padding: 8px 12px; flex: 1 1 110px; border-right: 1px solid var(--border); background: var(--surface-2); }
+.fact { padding: 7px 12px; flex: 1 1 100px; border-right: 1px solid var(--border); background: var(--surface-2); }
 .fact:last-child { border-right: 0; }
-.fact dt { color: var(--text-3); font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; }
-.fact dd { margin: 2px 0 0; font-size: .86rem; font-weight: 550; }
+.fact dt { color: var(--text-3); font-size: .66rem; text-transform: uppercase; letter-spacing: .06em; }
+.fact dd { margin: 2px 0 0; font-size: .85rem; font-weight: 550; }
 
-/* Why this matters */
-.claim { display: grid; gap: 4px; padding: 11px 0; border-top: 1px dashed var(--border); }
-.claim:first-child { border-top: 0; padding-top: 0; }
-.claim-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 650; }
+/* Target context: three claims of different strength, kept apart */
+.claim { display: grid; gap: 3px; padding: 10px 0; border-top: 1px dashed var(--border); }
+.claim:first-of-type { border-top: 0; padding-top: 0; }
+.claim-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); font-weight: 650; }
 .claim-body { font-size: .86rem; color: var(--text-2); }
 .claim-body b { color: var(--text); font-weight: 600; }
-.drug-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; }
+.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.drug-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 
 /* 3D site */
-.site-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; }
+.site-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
 @media (max-width: 860px) { .site-grid { grid-template-columns: 1fr; } }
-#viewer3d { width: 100%; height: 330px; border: 1px solid var(--border); border-radius: var(--r-tile); background: var(--surface-2); position: relative; }
+#viewer3d { width: 100%; height: 320px; border: 1px solid var(--border); border-radius: var(--r-tile); background: var(--surface-2); position: relative; }
 .viewer-controls { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 9px; }
-.viewer-legend { display: flex; gap: 13px; flex-wrap: wrap; font-size: .76rem; color: var(--text-3); margin-top: 8px; }
-.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
-.residues { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.viewer-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .75rem; color: var(--text-3); margin-top: 8px; }
+.swatch { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: 0; }
+.residues { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .res { font: 550 11.5px/1.75 var(--mono); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; background: var(--surface-2); color: var(--text-2); }
 .res.coord { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
-.kv { font-family: var(--mono); font-size: .78rem; color: var(--text-2); line-height: 1.75; }
+.kv { font-family: var(--mono); font-size: .77rem; color: var(--text-2); line-height: 1.8; }
 
-/* Summary strip */
+/* Headline numbers */
 .summary { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--border); border-radius: var(--r-panel); overflow: hidden; background: var(--surface); box-shadow: var(--shadow); margin-bottom: 14px; }
-.summary-cell { flex: 1 1 150px; padding: 13px 16px; border-right: 1px solid var(--border); }
+.summary-cell { flex: 1 1 170px; padding: 13px 16px; border-right: 1px solid var(--border); }
 .summary-cell:last-child { border-right: 0; }
-.summary-cell .k { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 650; }
-.summary-cell .v { font: 650 1.3rem/1.2 var(--mono); margin-top: 3px; }
+.summary-cell .k { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); font-weight: 650; }
+.summary-cell .v { font: 650 1.32rem/1.2 var(--mono); margin-top: 3px; }
 .summary-cell .v small { font-family: var(--sans); font-size: .72rem; font-weight: 500; color: var(--text-3); margin-left: 4px; }
 .summary-cell.hero { background: var(--accent-soft); }
-.summary-cell.hero .k { color: var(--accent); }
-.summary-cell.hero .v { color: var(--accent); }
+.summary-cell.hero .k, .summary-cell.hero .v { color: var(--accent); }
+
+/* The comparison chart: every molecule on one 0-10 axis */
+.cmp-axis { position: relative; height: 15px; margin-bottom: 4px; }
+.cmp-axis i { position: absolute; top: 0; font: 500 .68rem var(--mono); color: var(--text-3); font-style: normal; white-space: nowrap; }
+.cmp-axis i.mid { transform: translateX(-50%); }
+.cmp-axis i.end { transform: translateX(-100%); }
+.cmp-rows { display: grid; gap: 3px; }
+.cmp-row { display: grid; grid-template-columns: minmax(96px, 168px) 1fr 40px; gap: 10px; align-items: center; padding: 2px 0; border-radius: 5px; }
+.cmp-row:hover { background: var(--surface-2); }
+.cmp-name { font-size: .79rem; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmp-row.candidate .cmp-name { color: var(--text); font-weight: 600; }
+.cmp-track { position: relative; height: 16px; background: var(--surface-3); border-radius: 4px; overflow: hidden; }
+.cmp-track::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--border-strong); }
+.cmp-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--ref); min-width: 2px; }
+.cmp-row.candidate .cmp-bar { background: var(--accent); }
+.cmp-val { font-size: .8rem; font-weight: 600; text-align: right; color: var(--text-2); }
+.cmp-row.candidate .cmp-val { color: var(--accent); }
+.cmp-key { display: flex; gap: 14px; flex-wrap: wrap; font-size: .76rem; color: var(--text-3); margin-top: 11px; }
+@media (max-width: 560px) { .cmp-row { grid-template-columns: 84px 1fr 34px; gap: 7px; } .cmp-axis i.mid { font-size: 0; } }
 
 /* Tables */
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 999px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: var(--surface); color: var(--text-2); font-size: 12.5px; padding: 6px 13px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--accent); color: var(--accent-ink); }
 .table-scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: .86rem; }
-thead th { text-align: left; padding: 9px 12px; white-space: nowrap; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); font-weight: 650; border-bottom: 1px solid var(--border-strong); }
+thead th { text-align: left; padding: 9px 12px; white-space: nowrap; font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 650; border-bottom: 1px solid var(--border-strong); }
 thead th.r, td.r { text-align: right; }
+thead th[data-sort] { cursor: pointer; user-select: none; }
+thead th[data-sort]:hover { color: var(--accent); }
+thead th[data-sort]::after { content: "\2195"; opacity: .35; margin-left: 5px; }
+thead th[data-sort].asc::after { content: "\2191"; opacity: 1; color: var(--accent); }
+thead th[data-sort].desc::after { content: "\2193"; opacity: 1; color: var(--accent); }
 tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tbody tr:last-child td { border-bottom: 0; }
+tbody tr.reference td { background: var(--ref-soft); }
 tbody tr:hover td { background: var(--surface-2); }
 tbody tr.best td { background: var(--accent-soft); }
-tbody tr.best:hover td { background: color-mix(in srgb, var(--accent-soft) 80%, var(--accent)); }
-.mol { width: 104px; height: 54px; display: block; }
-.mol-fallback { font-family: var(--mono); font-size: 10px; color: var(--text-3); word-break: break-all; max-width: 120px; display: block; }
+.mol { width: 100px; height: 52px; display: block; }
+.mol-fallback { font-family: var(--mono); font-size: 10px; color: var(--text-3); word-break: break-all; max-width: 112px; display: block; }
 .cand-name { font-weight: 600; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.cand-sub { color: var(--text-3); font-size: .76rem; margin-top: 2px; }
+.cand-sub { color: var(--text-3); font-size: .75rem; margin-top: 2px; }
+.cand-sub a { color: var(--text-3); }
+.tag { font: 650 9.5px/1.9 var(--sans); text-transform: uppercase; letter-spacing: .05em; padding: 0 6px; border-radius: 3px; }
+.tag-you { background: var(--accent); color: var(--accent-ink); }
+.tag-ref { background: var(--surface-3); color: var(--text-2); border: 1px solid var(--border); }
 .score-cell { white-space: nowrap; }
-.score-v { font: 650 1.45rem/1 var(--mono); color: var(--accent); }
-.score-v small { font-family: var(--sans); font-size: .7rem; font-weight: 600; color: var(--text-3); }
-.score-why { font-size: .72rem; color: var(--text-3); margin-top: 3px; max-width: 190px; white-space: normal; }
+.score-v { font: 650 1.36rem/1 var(--mono); color: var(--accent); }
+.score-v small { font-family: var(--sans); font-size: .68rem; font-weight: 600; color: var(--text-3); }
+tr.reference .score-v { color: var(--text-2); }
+.tbar { height: 5px; border-radius: 3px; background: var(--surface-3); margin-top: 5px; overflow: hidden; max-width: 118px; }
+.tbar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+tr.reference .tbar i { background: var(--ref); }
+.score-why { font-size: .71rem; color: var(--text-3); margin-top: 4px; white-space: normal; max-width: 150px; }
 .withheld { color: var(--text-3); font-size: .8rem; font-style: italic; }
 .lip { display: flex; gap: 3px; flex-wrap: wrap; }
 .lip i { font-style: normal; font: 600 10px/1.7 var(--mono); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); }
-.lip i.fail { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
-.lip-verdict { font-size: .72rem; margin-top: 3px; }
+.lip i.fail { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 28%, transparent); }
+.lip-verdict { font-size: .72rem; margin-top: 4px; color: var(--text-3); }
+.lip-verdict b { color: var(--ok); }
+.lip-verdict b.bad { color: var(--warn); }
 
-/* Legend / explainers */
-details.explain { border: 1px solid var(--border); border-radius: var(--r-panel); background: var(--surface); margin-top: 14px; }
+/* Explainers */
+.drawers { display: grid; gap: 10px; margin-top: 18px; }
+details.explain { border: 1px solid var(--border); border-radius: var(--r-panel); background: var(--surface); }
 details.explain > summary { cursor: pointer; padding: 12px 16px; font-size: .86rem; font-weight: 600; }
 details.explain[open] > summary { border-bottom: 1px solid var(--border); }
-.explain-body { padding: 14px 16px; display: grid; gap: 12px; font-size: .85rem; color: var(--text-2); }
+.explain-body { padding: 14px 16px; display: grid; gap: 11px; font-size: .85rem; color: var(--text-2); }
 .explain-body b { color: var(--text); }
-.scale-bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+.scale-bar { display: flex; height: 7px; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
 .scale-bar span { flex: 1; }
-.scale-ticks { display: flex; justify-content: space-between; font: 500 .7rem var(--mono); color: var(--text-3); margin-top: 4px; }
-.iso-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
-.iso { border: 1px solid var(--border); border-radius: var(--r-tile); padding: 9px 11px; background: var(--surface-2); }
+.scale-ticks { display: flex; justify-content: space-between; font: 500 .69rem var(--mono); color: var(--text-3); margin-top: 4px; }
+.iso-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 8px; }
+.iso { border: 1px solid var(--border); border-radius: var(--r-tile); padding: 8px 11px; background: var(--surface-2); }
 .iso .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.iso b { font-size: .84rem; }
-.iso small { color: var(--text-3); font-size: .73rem; display: block; margin-top: 2px; line-height: 1.45; }
+.iso b { font-size: .83rem; }
+.iso small { color: var(--text-3); font-size: .72rem; display: block; margin-top: 2px; line-height: 1.45; }
 
 /* Dock dialog */
 dialog { border: 1px solid var(--border); border-radius: var(--r-panel); padding: 0; background: var(--surface); color: var(--text); width: min(920px, calc(100vw - 28px)); max-height: calc(100vh - 44px); box-shadow: 0 24px 64px -24px rgba(0,0,0,.5); }
-dialog::backdrop { background: rgba(18,18,16,.58); }
+dialog::backdrop { background: rgba(16,18,24,.6); }
 .dialog-head { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--border); }
 .dialog-head h2 { flex: 1; }
 .dialog-body { padding: 16px; overflow-y: auto; max-height: calc(100vh - 140px); }
@@ -248,7 +295,7 @@ dialog::backdrop { background: rgba(18,18,16,.58); }
     <span class="mark" aria-hidden="true">CA</span>
     <div>
       <h1>CA-Predictor</h1>
-      <p>Screen molecules against any human carbonic anhydrase structure.</p>
+      <p>Score molecules against any human carbonic anhydrase structure.</p>
     </div>
   </div>
 </header>
@@ -264,14 +311,15 @@ dialog::backdrop { background: rgba(18,18,16,.58); }
     <div class="step-rail"><span class="step-no">1</span><span class="step-line"></span></div>
     <div>
       <div class="step-head">
-        <h2>Choose a target structure</h2>
-        <span class="hint">The isoform decides the prediction, so it comes first.</span>
+        <h2>Pick the target</h2>
+        <span class="hint">Type the PDB ID of a human carbonic anhydrase. Which isoform it turns out to be
+          decides every number further down, so it comes first.</span>
       </div>
 
       <div class="panel">
         <div class="panel-body">
           <form action="/structure" method="POST" class="row" onsubmit="showOverlay('Loading structure')">
-            <div class="field" style="max-width:260px">
+            <div class="field" style="max-width:240px">
               <label for="target_pdb">PDB ID</label>
               <input type="text" id="target_pdb" name="target_pdb" maxlength="4" required
                      autocomplete="off" spellcheck="false" placeholder="e.g. 3HS4"
@@ -279,7 +327,6 @@ dialog::backdrop { background: rgba(18,18,16,.58); }
             </div>
             <button type="submit" class="btn-primary">Load structure</button>
           </form>
-          <p class="help" style="margin-top:8px">Any structure of a catalytic human CA isoform. Everything shown about it is read from the PDB entry.</p>
           <div class="suggest">
             <span class="help">Try:</span>
             {% for pdb, iso, why in suggested %}
@@ -313,7 +360,6 @@ dialog::backdrop { background: rgba(18,18,16,.58); }
               <dl class="facts">
                 <div class="fact"><dt>Resolution</dt><dd>{% if s.resolution %}{{ s.resolution }} &#8491;{% else %}n/a{% endif %}</dd></div>
                 <div class="fact"><dt>Method</dt><dd>{{ (s.method or 'n/a')|title }}</dd></div>
-                <div class="fact"><dt>Deposited</dt><dd>{{ s.deposited or 'n/a' }}</dd></div>
                 <div class="fact"><dt>Gene</dt><dd>{{ iso.gene }}</dd></div>
                 <div class="fact"><dt>UniProt</dt><dd><a href="https://www.uniprot.org/uniprotkb/{{ iso.accession }}" rel="noopener">{{ iso.accession }}</a></dd></div>
                 <div class="fact"><dt>Entry</dt><dd><a href="{{ s.rcsb_url }}" rel="noopener">RCSB</a></dd></div>
@@ -322,40 +368,37 @@ dialog::backdrop { background: rgba(18,18,16,.58); }
           </div>
         </div>
 
-        <!-- Why this target matters: three claims of different strength, kept apart -->
         <div class="panel-body panel-split">
-          <h3 style="margin-bottom:9px">Why this target matters</h3>
+          <h3 style="margin-bottom:9px">Why this target is worth inhibiting</h3>
           <div class="claim">
             <span class="claim-label">What inhibiting {{ iso.label }} is for</span>
             <span class="claim-body">{{ iso.therapeutic }} <b class="muted">{{ iso.role|capitalize }}.</b></span>
           </div>
           {% if view.drugs %}
           <div class="claim">
-            <span class="claim-label">Drugs ChEMBL records as acting on this target</span>
+            <span class="claim-label">Drugs ChEMBL records as acting on it</span>
             <span class="claim-body">
-              <div class="drug-list">
+              <span class="drug-list">
                 {% for d in view.drugs %}
                 <a class="chip chip-plain" href="https://www.ebi.ac.uk/chembl/compound_report_card/{{ d.chembl_id }}/" rel="noopener" title="{{ d.provenance }}">{{ d.name }}</a>
                 {% endfor %}
-              </div>
+              </span>
             </span>
           </div>
           {% endif %}
           {% if view.diseases %}
           <div class="claim">
-            <span class="claim-label">Genetic disease UniProt annotates for {{ iso.gene }}</span>
+            <span class="claim-label">Disease UniProt annotates for {{ iso.gene }}</span>
             <span class="claim-body">
-              {% for d in view.diseases %}
-              <b>{{ d.name }}{% if d.acronym %} ({{ d.acronym }}){% endif %}.</b>
-              {{ d.description }}
+              {% for d in view.diseases[:2] %}
+              <span class="clamp" title="{{ d.description }}"><b>{{ d.name }}{% if d.acronym %} ({{ d.acronym }}){% endif %}.</b> {{ d.description }}</span>
               {% endfor %}
-              <em class="small">This is what variants in the gene cause, which is not the same claim as inhibiting the enzyme treating it.</em>
+              <em class="small">What variants in the gene cause &mdash; not a claim that inhibiting the enzyme treats it.</em>
             </span>
           </div>
           {% endif %}
         </div>
 
-        <!-- The docking site, in 3D -->
         {% if view.site %}
         {% set site = view.site %}
         <div class="panel-body panel-split">
@@ -370,18 +413,17 @@ dialog::backdrop { background: rgba(18,18,16,.58); }
                 <button type="button" class="btn-ghost" id="btnSpin">Spin</button>
               </div>
               <div class="viewer-legend">
-                <span><span class="swatch" style="background:#9aa0a6"></span>protein</span>
-                <span><span class="swatch" style="background:#8a5a00"></span>catalytic zinc</span>
-                <span><span class="swatch" style="background:#0f766e"></span>histidine triad</span>
-                <span><span class="swatch" style="background:#b06ab3"></span>pocket lining</span>
+                <span><span class="swatch" style="background:#98a0b4"></span>protein</span>
+                <span><span class="swatch" style="background:#c77c12"></span>catalytic zinc</span>
+                <span><span class="swatch" style="background:#5b51e8"></span>zinc-binding histidines</span>
+                <span><span class="swatch" style="background:#c0558a"></span>pocket lining</span>
                 <span><span class="swatch" style="background:#d94f4f"></span>search box</span>
               </div>
             </div>
             <div>
               <p class="kv">
                 chain <b>{{ site.chain }}</b>{% if site.zinc_count > 1 %} (of {{ site.zinc_count }} zinc sites){% endif %}<br>
-                box centre {{ site.box_centre[0] }}, {{ site.box_centre[1] }}, {{ site.box_centre[2] }}<br>
-                box size {{ site.box_size[0]|int }} &times; {{ site.box_size[1]|int }} &times; {{ site.box_size[2]|int }} &#8491;
+                box {{ site.box_size[0]|int }} &times; {{ site.box_size[1]|int }} &times; {{ site.box_size[2]|int }} &#8491;, centred on the zinc
               </p>
               <div style="margin-top:12px">
                 <span class="claim-label">Zinc held by</span>
@@ -392,8 +434,12 @@ dialog::backdrop { background: rgba(18,18,16,.58); }
                 </div>
               </div>
               <div style="margin-top:12px">
-                <span class="claim-label">Pocket lining, within 8 &#8491;</span>
-                <div class="residues">
+                <span class="claim-label">Pocket lining</span>
+                <p class="small muted" style="margin-top:3px">
+                  {{ site.pocket_residues|length }} residues within 8 &#8491; of the zinc.
+                  <button type="button" class="btn-link" id="btnPocket" aria-expanded="false">show</button>
+                </p>
+                <div class="residues" id="pocketList" hidden>
                   {% for r in site.pocket_residues %}<span class="res">{{ r.name }}{{ r.number }}</span>{% endfor %}
                 </div>
               </div>
@@ -415,228 +461,264 @@ dialog::backdrop { background: rgba(18,18,16,.58); }
     <div class="step-rail"><span class="step-no">2</span>{% if result %}<span class="step-line"></span>{% endif %}</div>
     <div>
       <div class="step-head">
-        <h2>Screen molecules{% if view %} against {{ view.structure.pdb_id }}{% endif %}</h2>
-        {% if not view %}<span class="hint">Load a structure first.</span>{% endif %}
+        <h2>Score your molecules{% if view %} against {{ view.isoform.label }}{% endif %}</h2>
+        <span class="hint">
+          {%- if view -%}
+          Paste the molecules you want tested, as SMILES. Each one goes through the trained
+          ensemble together with {{ view.isoform.label }}&rsquo;s own protein descriptors and comes back with a
+          potency score out of 10, a drug-likeness verdict, and the option to dock it into the
+          site above. The known {{ view.isoform.label }} inhibitors are scored alongside them, so you can see
+          where yours land.
+          {%- else -%}
+          This is where you paste the molecules to be tested. The prediction depends on the
+          isoform, so load a structure first.
+          {%- endif -%}
+        </span>
       </div>
       <div class="panel">
         <div class="panel-body">
           {% if view %}
-          <form action="/predict" method="POST" onsubmit="showOverlay('Scoring candidates')">
+          <form action="/predict" method="POST" onsubmit="showOverlay('Scoring molecules')">
             <input type="hidden" name="target_pdb" value="{{ view.structure.pdb_id }}">
             <div class="field">
-              <label for="smiles_input">Candidate molecules, as SMILES</label>
+              <label for="smiles_input">Molecules, as SMILES &mdash; one per line</label>
               <textarea id="smiles_input" name="smiles_input" spellcheck="false"
-                        placeholder="One SMILES per line, optionally `name, SMILES`">{{ smiles_input }}</textarea>
-              <span class="help">One per line. Prefix with a name and a comma to label it.</span>
+                        placeholder="CC(=O)Nc1nnc(s1)S(=O)(=O)N&#10;my compound, CCOc1ccc2nc(S(N)(=O)=O)sc2c1">{{ smiles_input }}</textarea>
+              <span class="help">Put a name and a comma in front of a line to label it.</span>
             </div>
-            <div style="margin-top:12px">
+            <div class="row" style="margin-top:12px">
               <button type="submit" class="btn-primary">Score against {{ view.isoform.label }}</button>
+              <button type="button" class="btn-ghost" id="btnExamples">Reload examples</button>
             </div>
           </form>
           {% else %}
-          <p class="muted small">Once a structure is loaded, paste your molecules here and they will be scored against that isoform.</p>
+          <p class="muted small">Nothing to score yet.</p>
           {% endif %}
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ─────────── RESULTS ─────────── -->
+  <!-- ─────────── STEP 3: results ─────────── -->
   {% if result %}
   {% set iso = result.isoform %}
+  {% set passing = result.novels | selectattr('Lipinski_Pass') | list %}
+  {% set scored_rows = result.novels | selectattr('score') | list %}
+  {% set all_rows = (result.novels + result.refs) | sort(attribute='Predicted_pIC50', reverse=true) %}
+  {% set chart_rows = all_rows | selectattr('score') | list %}
   <section class="step active">
     <div class="step-rail"><span class="step-no">3</span></div>
     <div>
       <div class="step-head">
         <h2>Results</h2>
-        <span class="hint">Ranked against {{ iso.label }}.</span>
+        <span class="hint">Your molecules and the known {{ iso.label }} inhibitors, put through the same
+          model so the two can be read off against each other.</span>
       </div>
 
-      {% set passing = result.novels | selectattr('Lipinski_Pass') | list %}
-      {% set scored_rows = result.novels | selectattr('score') | list %}
       <div class="summary">
-        <div class="summary-cell">
-          <div class="k">Screened</div>
-          <div class="v">{{ result.novels|length }}<small>molecules</small></div>
-        </div>
         {% if scored_rows %}
         <div class="summary-cell hero">
-          <div class="k">Best predicted</div>
+          <div class="k">Best of yours</div>
           <div class="v">{{ '%.1f'|format(scored_rows[0].score) }}<small>/ 10</small></div>
           <div class="small" style="color:var(--accent)">{{ scored_rows[0].name }}</div>
         </div>
         {% endif %}
+        {% if result.ranking %}
         <div class="summary-cell">
-          <div class="k">Pass Lipinski</div>
-          <div class="v">{{ passing|length }}<small>of {{ result.novels|length }}</small></div>
-          <div class="small muted">{{ (passing | map(attribute='name') | join(', '))[:60] or 'none' }}</div>
+          <div class="k">Where that lands</div>
+          <div class="v">{{ result.ranking.rank|ordinal }}<small>of {{ result.ranking.of }}</small></div>
+          <div class="small muted">ahead of {{ result.ranking.beats }} of the {{ result.ranking.references }} known {{ iso.label }} inhibitors</div>
         </div>
+        {% endif %}
         <div class="summary-cell">
-          <div class="k">Reference set</div>
-          <div class="v">{{ result.refs|length }}<small>known</small></div>
-          <div class="small muted">{{ iso.label }} inhibitors from ChEMBL</div>
+          <div class="k">Orally drug-like</div>
+          <div class="v">{{ passing|length }}<small>of {{ result.novels|length }} yours</small></div>
+          <div class="small muted">Lipinski, at most one violation</div>
         </div>
       </div>
 
-      {% macro table(items, kind) %}
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:114px">Structure</th>
-              <th>Molecule</th>
-              <th style="width:200px">Predicted potency</th>
-              <th class="r" style="width:76px">pAff</th>
-              <th class="r" style="width:92px">nM</th>
-              <th style="width:150px">Lipinski</th>
-              <th class="r" style="width:58px">QED</th>
-              <th style="width:96px"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in items %}
-            <tr {% if kind == 'candidate' and loop.first and row.score is not none %}class="best"{% endif %}>
-              <td><canvas class="mol" data-smiles="{{ row.smiles }}" width="104" height="54"></canvas></td>
-              <td>
-                <div class="cand-name">
-                  {{ row.name }}
-                  {% if kind == 'candidate' and loop.first and row.score is not none %}<span class="chip chip-accent">best</span>{% endif %}
-                </div>
-                <div class="cand-sub">
-                  {% if kind == 'reference' %}{{ row.provenance }}{% endif %}
-                  {% if row.chembl_id %}<a href="https://www.ebi.ac.uk/chembl/compound_report_card/{{ row.chembl_id }}/" rel="noopener">{{ row.chembl_id }}</a>{% endif %}
-                  {% if kind != 'reference' %}<a href="{{ row.PubChem_Link }}" rel="noopener">PubChem</a>{% endif %}
-                </div>
-              </td>
-              <td class="score-cell">
-                {% if row.score is not none %}
-                  <span class="score-v">{{ '%.1f'|format(row.score) }}<small> / 10</small></span>
-                  <div class="score-why">stronger than <b>{{ row.percentile }}%</b> of known {{ iso.label }} inhibitors</div>
-                {% else %}
-                  <span class="withheld">not scored</span>
-                  <div class="score-why">{{ result.scale }}</div>
-                {% endif %}
-              </td>
-              <td class="r num">{{ '%.2f'|format(row.Predicted_pIC50) }}</td>
-              <td class="r num">{{ '{:,.0f}'.format(row.IC50_nM) if row.IC50_nM >= 1 else '%.2f'|format(row.IC50_nM) }}</td>
-              <td>
-                <div class="lip">
-                  {% for c in row.Lipinski %}
-                  <i class="{{ '' if c.passed else 'fail' }}" title="{{ c.name }} {{ c.value }} (limit {{ c.limit }})">{{ c.short }} {{ c.value }}</i>
-                  {% endfor %}
-                </div>
-                <div class="lip-verdict">
-                  {% if row.Violations == 0 %}<span class="chip chip-ok">all 4 rules pass</span>
-                  {% elif row.Lipinski_Pass %}<span class="chip chip-plain">1 violation, still drug-like</span>
-                  {% else %}<span class="chip chip-warn">{{ row.Violations }} violations</span>{% endif %}
-                </div>
-              </td>
-              <td class="r num">{{ '%.2f'|format(row.ADMET_QED) }}</td>
-              <td>
-                {% if view and view.site %}
-                <button type="button" class="btn-ghost dock-btn" data-smiles="{{ row.smiles }}" data-name="{{ row.name }}">Dock</button>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% endmacro %}
-
-      {% if result.novels %}
+      {% if chart_rows %}
       <div class="panel">
-        <div class="panel-head"><h2>Your candidates</h2><span class="note">Highest predicted potency first.</span></div>
-        {{ table(result.novels, 'candidate') }}
+        <div class="panel-head">
+          <h2>Side by side</h2>
+          <span class="note">Every molecule on one 0&ndash;10 axis.</span>
+        </div>
+        <div class="panel-body">
+          <div class="cmp-axis" aria-hidden="true">
+            <i style="left:0">0</i><i class="mid" style="left:50%">5 &middot; typical known inhibitor</i><i class="end" style="left:100%">10</i>
+          </div>
+          <div class="cmp-rows">
+            {% for row in chart_rows %}
+            <div class="cmp-row {{ row.kind }}">
+              <span class="cmp-name" title="{{ row.name }}">{{ row.name }}</span>
+              <span class="cmp-track"><span class="cmp-bar" style="width:{{ (row.score * 10)|round(1) }}%"></span></span>
+              <span class="cmp-val num">{{ '%.1f'|format(row.score) }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="cmp-key">
+            <span><span class="swatch" style="background:var(--accent)"></span>yours</span>
+            <span><span class="swatch" style="background:var(--ref)"></span>known {{ iso.label }} inhibitors</span>
+            <span>Every bar is the model&rsquo;s own prediction, the known inhibitors included, so the comparison is like for like.</span>
+          </div>
+        </div>
       </div>
       {% endif %}
 
       <div class="panel">
-        <div class="panel-head"><h2>Known {{ iso.label }} inhibitors</h2><span class="note">{{ result.reference_note }}</span></div>
-        {% if result.refs %}{{ table(result.refs, 'reference') }}
-        {% else %}<div class="panel-body"><p class="withheld">No reference inhibitors could be retrieved.</p></div>{% endif %}
+        <div class="panel-head">
+          <h2>All molecules</h2>
+          <span class="note">Click a heading to sort.</span>
+          <div class="seg" role="group" aria-label="Filter rows">
+            <button type="button" class="on" data-filter="all">All</button>
+            <button type="button" data-filter="candidate">Yours</button>
+            <button type="button" data-filter="reference">Known</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table id="resultTable">
+            <thead>
+              <tr>
+                <th style="width:110px">Structure</th>
+                <th data-sort="text">Molecule</th>
+                <th data-sort="num" class="desc" style="width:170px">Score /10</th>
+                <th data-sort="num" class="r" style="width:106px">Potency</th>
+                <th data-sort="num" style="width:172px">Drug-likeness</th>
+                <th style="width:86px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in all_rows %}
+              <tr data-kind="{{ row.kind }}"
+                  class="{{ row.kind }}{% if row.kind == 'candidate' and row.score is not none and row.name == scored_rows[0].name %} best{% endif %}">
+                <td><canvas class="mol" data-smiles="{{ row.smiles }}" width="100" height="52"></canvas></td>
+                <td data-v="{{ row.name }}">
+                  <div class="cand-name">
+                    <span class="tag {{ 'tag-you' if row.kind == 'candidate' else 'tag-ref' }}">{{ 'yours' if row.kind == 'candidate' else 'known' }}</span>
+                    {{ row.name }}
+                  </div>
+                  <div class="cand-sub">
+                    {% if row.kind == 'reference' %}{{ row.provenance }} &middot; {% endif %}
+                    {% if row.chembl_id %}<a href="https://www.ebi.ac.uk/chembl/compound_report_card/{{ row.chembl_id }}/" rel="noopener">ChEMBL</a>{% endif %}
+                    {% if row.PubChem_Link %}<a href="{{ row.PubChem_Link }}" rel="noopener">PubChem</a>{% endif %}
+                  </div>
+                </td>
+                <td class="score-cell" data-v="{{ row.score if row.score is not none else -1 }}">
+                  {% if row.score is not none %}
+                    <span class="score-v">{{ '%.1f'|format(row.score) }}<small> / 10</small></span>
+                    <div class="tbar"><i style="width:{{ (row.score * 10)|round(1) }}%"></i></div>
+                    <div class="score-why">stronger than {{ row.percentile }}% of known {{ iso.label }} inhibitors</div>
+                  {% else %}
+                    <span class="withheld">not scored</span>
+                  {% endif %}
+                </td>
+                <td class="r" data-v="{{ row.Predicted_pIC50 }}">
+                  <span class="num">{{ '{:,.0f}'.format(row.IC50_nM) if row.IC50_nM >= 1 else '%.2f'|format(row.IC50_nM) }}</span><small class="muted"> nM</small>
+                  <div class="cand-sub num">pAff {{ '%.2f'|format(row.Predicted_pIC50) }}</div>
+                </td>
+                <td data-v="{{ row.ADMET_QED }}">
+                  <div class="lip">
+                    {% for c in row.Lipinski %}
+                    <i class="{{ '' if c.passed else 'fail' }}" title="{{ c.name }} {{ c.value }} (limit {{ c.limit }})">{{ c.short }} {{ c.value }}</i>
+                    {% endfor %}
+                  </div>
+                  <div class="lip-verdict">
+                    {% if row.Violations == 0 %}<b>all 4 rules pass</b>
+                    {% elif row.Lipinski_Pass %}<b>1 violation, still drug-like</b>
+                    {% else %}<b class="bad">{{ row.Violations }} violations</b>{% endif %}
+                    &middot; QED {{ '%.2f'|format(row.ADMET_QED) }}
+                  </div>
+                </td>
+                <td>
+                  {% if view and view.site %}
+                  <button type="button" class="btn-ghost dock-btn" data-smiles="{{ row.smiles }}" data-name="{{ row.name }}">Dock</button>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="panel-body panel-split small muted">{{ result.reference_note }}</div>
       </div>
 
+      {% if not result.scored %}
+      <div class="message message-warn" style="margin-top:14px"><strong>Potency withheld for {{ iso.label }}.</strong> {{ result.scale }}</div>
+      {% endif %}
       {% if result.skipped %}
       <div class="message message-warn" style="margin-top:14px"><strong>Skipped:</strong> {{ result.skipped|join(', ') }}. These could not be parsed as SMILES.</div>
       {% endif %}
-
-      <details class="explain" open>
-        <summary>How to read these numbers</summary>
-        <div class="explain-body">
-          <div>
-            <b>The score out of 10 is a percentile, not a probability.</b>
-            It places the predicted affinity inside the range actually measured
-            against {{ iso.label }} in ChEMBL. 7.0 means the molecule is predicted
-            stronger than 70% of known {{ iso.label }} inhibitors; 3.0 means
-            weaker than 70% of them. It says nothing about whether the molecule is
-            safe, selective or synthesisable.
-            <div class="scale-bar" style="margin-top:8px">
-              <span style="background:var(--surface-3)"></span><span style="background:#cfe4e1"></span>
-              <span style="background:#9ccfc8"></span><span style="background:#4fa89e"></span><span style="background:var(--accent)"></span>
-            </div>
-            <div class="scale-ticks"><span>0 weakest</span><span>5 typical known inhibitor</span><span>10 strongest</span></div>
-          </div>
-          <div><b>pAff</b> is the predicted affinity as -log10(molar), pooling IC50 and Ki the way ChEMBL does; <b>nM</b> is the same number as a concentration. Lower nM is more potent.</div>
-          <div>
-            <b>Lipinski's Rule of 5</b> asks four questions about oral drug-likeness:
-            molecular weight &le; 500, LogP &le; 5, hydrogen-bond donors &le; 5,
-            acceptors &le; 10. Lipinski's own formulation tolerates one violation,
-            which is why a molecule breaking a single rule is still marked
-            drug-like. The chips show each measured value, and a failing one is
-            highlighted.
-          </div>
-          <div><b>QED</b> is a 0 to 1 summary of drug-likeness; around 0.5 and above is typical of marketed oral drugs.</div>
-          {% if result.scored %}<div class="small">{{ result.scale }}</div>{% endif %}
-        </div>
-      </details>
     </div>
   </section>
   {% endif %}
 
-  <details class="explain">
-    <summary>Model coverage: which isoforms can be scored, and why some cannot</summary>
-    <div class="explain-body">
-      <div>Potency is predicted by a Random Forest and LSTM ensemble over the
-        molecule's fingerprint <b>plus four descriptors of the target protein</b>,
-        so the same molecule scores differently against different isoforms. An
-        isoform is only scored if the model demonstrably predicts it: it needs
-        enough measured molecules <b>and</b> a usable R&sup2; on held-out molecules
-        of that isoform. Where it does not, the structure can still be docked and
-        its site inspected, and the potency number is withheld rather than guessed.</div>
-      <div class="iso-grid">
-        {% for i in isoforms %}
-        <div class="iso">
-          <div class="top">
-            <b>{{ i.label }}</b>
-            {% if i.is_scored %}<span class="chip chip-ok">R&sup2; {{ '%.2f'|format(i.test_r2) }}</span>
-            {% else %}<span class="chip chip-warn">not scored</span>{% endif %}
+  <div class="drawers">
+    <details class="explain" {% if result %}open{% endif %}>
+      <summary>What the numbers mean</summary>
+      <div class="explain-body">
+        <div>
+          <b>The score out of 10 is a percentile, not a probability.</b>
+          It is where the predicted affinity falls inside the range actually measured
+          against this isoform in ChEMBL. 7.0 means stronger than 70% of its known
+          inhibitors. 3.2 means stronger than only 32% of them, so weaker than most of
+          them. It says nothing about safety, selectivity, or whether the molecule can
+          be made.
+          <div class="scale-bar" style="margin-top:8px">
+            <span style="background:var(--surface-3)"></span><span style="background:var(--accent-soft)"></span>
+            <span style="background:var(--accent-line)"></span><span style="background:var(--accent-dim)"></span><span style="background:var(--accent)"></span>
           </div>
-          <small>{{ i.gene }} &middot; {{ i.role }}</small>
-          <small>{% if i.is_scored %}{{ '{:,}'.format(i.measurements) }} molecules measured{% else %}{{ i.withheld_reason }}{% endif %}</small>
+          <div class="scale-ticks"><span>0 weakest</span><span>5 typical known inhibitor</span><span>10 strongest</span></div>
         </div>
-        {% endfor %}
+        <div><b>Potency</b> is that same prediction as a concentration: nM is how much of
+          the molecule you would need, so lower is better. <b>pAff</b> underneath is
+          &minus;log10 of it in molar, pooling IC50 and Ki the way ChEMBL does.</div>
+        <div><b>Lipinski&rsquo;s Rule of 5</b> asks four questions about whether a molecule
+          could work as a pill: molecular weight &le; 500, LogP &le; 5, hydrogen-bond
+          donors &le; 5, acceptors &le; 10. Each chip shows the measured value and turns
+          amber when it breaks its limit. Lipinski&rsquo;s own formulation tolerates one
+          violation, which is why a molecule failing a single rule still counts as
+          drug-like. <b>QED</b> rolls the same idea into one 0&ndash;1 number, where 0.5 and
+          above is typical of marketed oral drugs.</div>
+        {% if result and result.scored %}<div class="small">{{ result.scale }}</div>{% endif %}
       </div>
-      <div class="small">Trained on {{ '{:,}'.format(family_measurements) }} measurements from ChEMBL, split by molecule so no molecule appears in both training and test.</div>
-    </div>
-  </details>
+    </details>
 
-  <details class="explain">
-    <summary>What the docking does, and what it cannot tell you</summary>
-    <div class="explain-body">
-      <div><b>Docking</b> uses AutoDock Vina with the AutoDock4Zn force field. The
-        receptor is protonated and its zinc maps built for your structure on
-        demand, which is why the first molecule takes about a minute.</div>
-      <div><b>Read the zinc distance, not just the score.</b> Carbonic anhydrase
-        inhibitors work by coordinating the catalytic zinc with a sulfonamide
-        nitrogen at roughly 2 &#8491;. A pose that scores well but sits 5 &#8491;
-        away is probably not the real binding mode, so every pose is shown with
-        its zinc distance and the residues it touches.</div>
-      <div><b>Limits:</b> the receptor is rigid, solvent is implicit, and scores
-        are a ranking aid rather than binding free energies. Potency is
-        interpolation from measured data, not discovery.</div>
-    </div>
-  </details>
+    <details class="explain">
+      <summary>How the model and the docking work, and what they cannot tell you</summary>
+      <div class="explain-body">
+        <div>Potency comes from a Random Forest and LSTM ensemble over the molecule&rsquo;s
+          fingerprint <b>plus four descriptors of the target protein</b>, which is why the
+          same molecule scores differently against different isoforms. Trained on
+          {{ '{:,}'.format(family_measurements) }} measurements from ChEMBL, split by
+          molecule so that no molecule appears in both training and test.</div>
+        <div><b>An isoform is only scored if the model demonstrably predicts it</b> &mdash;
+          enough measured molecules <i>and</i> a usable R&sup2; on held-out molecules of
+          that isoform. Where it does not, the structure can still be docked and its site
+          inspected, and the number is withheld rather than guessed.</div>
+        <div class="iso-grid">
+          {% for i in isoforms %}
+          <div class="iso">
+            <div class="top">
+              <b>{{ i.label }}</b>
+              {% if i.is_scored %}<span class="chip chip-ok">R&sup2; {{ '%.2f'|format(i.test_r2) }}</span>
+              {% else %}<span class="chip chip-warn">not scored</span>{% endif %}
+            </div>
+            <small>{{ i.gene }} &middot; {{ i.role }}</small>
+            <small>{% if i.is_scored %}{{ '{:,}'.format(i.measurements) }} molecules measured{% else %}{{ i.withheld_reason }}{% endif %}</small>
+          </div>
+          {% endfor %}
+        </div>
+        <div><b>Docking</b> uses AutoDock Vina with the AutoDock4Zn force field. The
+          receptor is protonated and its zinc maps built for your structure on demand, so
+          the first molecule takes about a minute. <b>Read the zinc distance, not just the
+          score:</b> these inhibitors work by coordinating the catalytic zinc with a
+          sulfonamide nitrogen at roughly 2 &#8491;, so a pose that scores well but sits
+          5 &#8491; away is probably not the real binding mode. The receptor is rigid and
+          the solvent implicit, which makes the scores a ranking aid rather than binding
+          free energies.</div>
+      </div>
+    </details>
+  </div>
 </main>
 
 <dialog id="dockDialog" aria-labelledby="dockTitle">
@@ -653,6 +735,7 @@ dialog::backdrop { background: rgba(18,18,16,.58); }
 
 <script>
 var STRUCTURE = {{ view_json | safe }};
+var EXAMPLES = {{ example_smiles | tojson }};
 
 function showOverlay(text) {
   document.getElementById("overlayText").textContent = text;
@@ -668,24 +751,88 @@ function showOverlay(text) {
     });
   }
 
+  function bind(id, handler) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("click", function () { handler(el); });
+  }
+
   /* 2D depictions: RDKit's drawing module needs X11 libraries the serverless
      runtime does not have, so structures are drawn in the browser. */
   window.addEventListener("load", function () {
-    if (!window.SmilesDrawer) return;
-    var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    var drawer = new SmilesDrawer.Drawer({ width: 104, height: 54, bondThickness: 0.9, padding: 2 });
-    document.querySelectorAll("canvas.mol").forEach(function (canvas) {
-      SmilesDrawer.parse(canvas.dataset.smiles, function (tree) {
-        drawer.draw(tree, canvas, dark ? "dark" : "light");
-      }, function () {
-        var span = document.createElement("span");
-        span.className = "mol-fallback";
-        span.textContent = canvas.dataset.smiles;
-        canvas.replaceWith(span);
+    if (window.SmilesDrawer) {
+      var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var drawer = new SmilesDrawer.Drawer({ width: 100, height: 52, bondThickness: 0.9, padding: 2 });
+      document.querySelectorAll("canvas.mol").forEach(function (canvas) {
+        SmilesDrawer.parse(canvas.dataset.smiles, function (tree) {
+          drawer.draw(tree, canvas, dark ? "dark" : "light");
+        }, function () {
+          var span = document.createElement("span");
+          span.className = "mol-fallback";
+          span.textContent = canvas.dataset.smiles;
+          canvas.replaceWith(span);
+        });
       });
-    });
+    }
     initSiteViewer();
   });
+
+  /* ── Step 2 conveniences ── */
+  bind("btnExamples", function () {
+    var box = document.getElementById("smiles_input");
+    if (box) { box.value = EXAMPLES; box.focus(); }
+  });
+
+  bind("btnPocket", function (el) {
+    var list = document.getElementById("pocketList");
+    if (!list) return;
+    var show = list.hasAttribute("hidden");
+    if (show) { list.removeAttribute("hidden"); } else { list.setAttribute("hidden", ""); }
+    el.textContent = show ? "hide" : "show";
+    el.setAttribute("aria-expanded", String(show));
+  });
+
+  /* ── Sorting and filtering the results table ──
+     Comparing candidates against the knowns is the point of the table, so it can
+     be reordered by any column and narrowed to one set without a round trip. */
+  var table = document.getElementById("resultTable");
+  if (table) {
+    var tbody = table.querySelector("tbody");
+
+    function cellValue(tr, index, kind) {
+      var cell = tr.children[index];
+      var raw = cell && cell.dataset.v !== undefined ? cell.dataset.v : (cell ? cell.textContent : "");
+      return kind === "num" ? parseFloat(raw) : String(raw).toLowerCase();
+    }
+
+    var headers = table.querySelectorAll("th[data-sort]");
+    headers.forEach(function (th) {
+      th.addEventListener("click", function () {
+        var index = Array.prototype.indexOf.call(th.parentNode.children, th);
+        var kind = th.dataset.sort;
+        var descending = !th.classList.contains("desc");
+        headers.forEach(function (other) { other.classList.remove("asc", "desc"); });
+        th.classList.add(descending ? "desc" : "asc");
+
+        Array.prototype.slice.call(tbody.rows).sort(function (a, b) {
+          var x = cellValue(a, index, kind), y = cellValue(b, index, kind);
+          if (x < y) return descending ? 1 : -1;
+          if (x > y) return descending ? -1 : 1;
+          return 0;
+        }).forEach(function (tr) { tbody.appendChild(tr); });
+      });
+    });
+
+    var filters = document.querySelectorAll(".seg button[data-filter]");
+    filters.forEach(function (button) {
+      button.addEventListener("click", function () {
+        var wanted = button.dataset.filter;
+        filters.forEach(function (other) { other.classList.toggle("on", other === button); });
+        Array.prototype.forEach.call(tbody.rows, function (tr) {
+          tr.style.display = (wanted === "all" || tr.dataset.kind === wanted) ? "" : "none";
+        });
+      });
+    });
+  }
 
   /* ── The structure, with the docking site highlighted ── */
   var siteViewer = null, spinning = false, boxShown = true, boxShape = null;
@@ -694,26 +841,27 @@ function showOverlay(text) {
     var host = document.getElementById("viewer3d");
     if (!host || !window.$3Dmol || !STRUCTURE || !STRUCTURE.site) return;
     var site = STRUCTURE.site;
+    var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-    siteViewer = $3Dmol.createViewer(host, { backgroundColor: "white" });
+    siteViewer = $3Dmol.createViewer(host, { backgroundColor: dark ? "#1d2130" : "white" });
     $3Dmol.download("pdb:" + STRUCTURE.pdb_id, siteViewer, {}, function () {
       var chain = site.chain;
-      siteViewer.setStyle({}, { cartoon: { color: "#c9ccd1", opacity: 0.55 } });
-      siteViewer.setStyle({ chain: chain }, { cartoon: { color: "#9aa0a6", opacity: 0.9 } });
+      siteViewer.setStyle({}, { cartoon: { color: "#c2c7d4", opacity: 0.5 } });
+      siteViewer.setStyle({ chain: chain }, { cartoon: { color: "#98a0b4", opacity: 0.9 } });
 
       // The pocket lining, then the histidine triad over it, then the zinc.
       var pocket = site.pocket_residues.map(function (r) { return parseInt(r.number, 10); });
       siteViewer.addStyle({ chain: chain, resi: pocket },
-        { stick: { radius: 0.12, color: "#b06ab3" } });
+        { stick: { radius: 0.12, color: "#c0558a" } });
       var triad = site.coordinating_residues.map(function (r) { return parseInt(r.number, 10); });
       siteViewer.addStyle({ chain: chain, resi: triad },
-        { stick: { radius: 0.2, color: "#0f766e" } });
-      siteViewer.addStyle({ resn: "ZN" }, { sphere: { color: "#8a5a00", radius: 0.95 } });
+        { stick: { radius: 0.2, color: "#5b51e8" } });
+      siteViewer.addStyle({ resn: "ZN" }, { sphere: { color: "#c77c12", radius: 0.95 } });
 
       site.coordinating_residues.forEach(function (r) {
         siteViewer.addLabel(r.name + r.number, {
           position: { x: 0, y: 0, z: 0 }, inFront: true, showBackground: true,
-          backgroundColor: "#0f766e", backgroundOpacity: 0.75, fontColor: "white",
+          backgroundColor: "#4338ca", backgroundOpacity: 0.78, fontColor: "white",
           fontSize: 10, alignment: "center"
         }, { chain: chain, resi: parseInt(r.number, 10), atom: r.atom });
       });
@@ -736,17 +884,11 @@ function showOverlay(text) {
 
   function zoomToSite() {
     if (!siteViewer) return;
-    var c = STRUCTURE.site.box_centre;
     siteViewer.zoomTo({ chain: STRUCTURE.site.chain,
                         resi: STRUCTURE.site.coordinating_residues.map(function (r) {
                           return parseInt(r.number, 10); }) });
     siteViewer.zoom(0.75);
     siteViewer.render();
-  }
-
-  function bind(id, handler) {
-    var el = document.getElementById(id);
-    if (el) el.addEventListener("click", function () { handler(el); });
   }
 
   bind("btnSite", function (el) {
@@ -780,10 +922,9 @@ function showOverlay(text) {
   var title = document.getElementById("dockTitle");
   var poseViewer = null, poseModel = null;
 
-  var closeBtn = document.getElementById("dockClose");
-  if (closeBtn) closeBtn.addEventListener("click", function () { dialog.close(); });
+  bind("dockClose", function () { dialog.close(); });
 
-  function renderPoses(data, name) {
+  function renderPoses(data) {
     var rows = data.poses.map(function (p) {
       var zinc = p.zinc_distance === null
         ? '<span class="withheld">no sulfonamide N</span>'
@@ -806,9 +947,9 @@ function showOverlay(text) {
     body.innerHTML =
       '<div id="poseViewer"></div>' +
       '<div class="viewer-legend">' +
-        '<span><span class="swatch" style="background:#9aa0a6"></span>receptor</span>' +
-        '<span><span class="swatch" style="background:#0f766e"></span>docked pose</span>' +
-        '<span><span class="swatch" style="background:#8a5a00"></span>zinc</span>' +
+        '<span><span class="swatch" style="background:#98a0b4"></span>receptor</span>' +
+        '<span><span class="swatch" style="background:#5b51e8"></span>docked pose</span>' +
+        '<span><span class="swatch" style="background:#c77c12"></span>zinc</span>' +
       "</div>" +
       '<p class="small muted" style="margin-top:12px">' + escapeHtml(data.isoform) +
         " &middot; " + escapeHtml(data.target_pdb) + " &middot; scored with " +
@@ -825,10 +966,11 @@ function showOverlay(text) {
     data.poses.forEach(function (p) { byRank[p.rank] = p; });
 
     if (window.$3Dmol) {
-      poseViewer = $3Dmol.createViewer("poseViewer", { backgroundColor: "white" });
+      var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      poseViewer = $3Dmol.createViewer("poseViewer", { backgroundColor: dark ? "#1d2130" : "white" });
       $3Dmol.download("pdb:" + data.target_pdb, poseViewer, {}, function () {
-        poseViewer.setStyle({}, { cartoon: { color: "#9aa0a6", opacity: 0.6 } });
-        poseViewer.addStyle({ resn: "ZN" }, { sphere: { color: "#8a5a00", radius: 0.95 } });
+        poseViewer.setStyle({}, { cartoon: { color: "#98a0b4", opacity: 0.6 } });
+        poseViewer.addStyle({ resn: "ZN" }, { sphere: { color: "#c77c12", radius: 0.95 } });
         showPose(data.poses[0]);
       });
     }
@@ -841,7 +983,7 @@ function showOverlay(text) {
     if (!poseViewer || !pose) return;
     if (poseModel) poseViewer.removeModel(poseModel);
     poseModel = poseViewer.addModel(pose.pose_pdb, "pdb");
-    poseViewer.setStyle({ model: poseModel }, { stick: { radius: 0.18, color: "#0f766e" } });
+    poseViewer.setStyle({ model: poseModel }, { stick: { radius: 0.18, color: "#5b51e8" } });
     poseViewer.zoomTo({ model: poseModel });
     poseViewer.zoom(0.6);
     poseViewer.render();
@@ -872,7 +1014,7 @@ function showOverlay(text) {
             escapeHtml(res.data.error || "Docking failed.") + "</div>";
           return;
         }
-        renderPoses(res.data, button.dataset.name);
+        renderPoses(res.data);
       }).catch(function () {
         body.innerHTML = '<div class="message message-error">Could not reach the docking service.</div>';
       }).finally(function () {

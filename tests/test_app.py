@@ -25,9 +25,10 @@ LIPINSKI = [
 ]
 
 
-def _row(name, smiles, score=7.0, percentile=70):
+def _row(name, smiles, score=7.0, percentile=70, kind="candidate", pic50=7.5):
     return {
-        "name": name, "smiles": smiles, "Predicted_pIC50": 7.5, "IC50_nM": 31.6,
+        "name": name, "smiles": smiles, "kind": kind,
+        "Predicted_pIC50": pic50, "IC50_nM": 31.6,
         "ADMET_QED": 0.6, "MW": 222.0, "LogP": -0.3, "TPSA": 115.0,
         "Lipinski": LIPINSKI, "Violations": 0, "Lipinski_Pass": True,
         "Lipinski_Reasons": "None",
@@ -78,10 +79,13 @@ def _result(scored=True):
     return {
         "structure": _structure(),
         "isoform": isoform,
-        "novels": [_row("Mine", "CCO", score=None if not scored else 4.2, percentile=42)],
-        "refs": [_row("Acetazolamide", "CC(=O)Nc1nnc(s1)S(=O)(=O)N")],
+        "novels": [_row("Mine", "CCO", score=None if not scored else 4.2, percentile=42,
+                        kind="candidate", pic50=6.4)],
+        "refs": [_row("Acetazolamide", "CC(=O)Nc1nnc(s1)S(=O)(=O)N", kind="reference")],
         "reference_note": "Known CA II inhibitors from ChEMBL target CHEMBL205.",
         "skipped": ["bogus"],
+        "ranking": {"name": "Mine", "score": 4.2, "rank": 2, "of": 2,
+                    "beats": 0, "references": 1} if scored else None,
         "scored": scored,
         "scale": "Out of 10 by percentile against 1538 molecules.",
     }
@@ -136,7 +140,7 @@ def test_home_page_lists_every_isoform_and_says_whether_it_is_scored(client):
 
 def test_step_two_is_locked_until_a_structure_is_loaded(client):
     page = client.get("/").data.decode()
-    assert "Load a structure first" in page
+    assert "load a structure first" in page
     assert 'name="smiles_input"' not in page
 
 
@@ -148,7 +152,7 @@ def test_structure_step_renders_the_target_and_its_context(client, monkeypatch):
     assert "glaucoma" in page                                  # therapeutic context
     assert "Acetazolamide" in page                             # ChEMBL-annotated drug
     assert "OPTB3" in page                                     # UniProt disease
-    assert "not the same claim" in page                        # the two are kept apart
+    assert "not a claim that inhibiting" in page               # the two are kept apart
     assert "HIS94" in page and "THR199" in page                # docking site
     assert 'id="viewer3d"' in page                             # 3D viewer mounted
     assert 'name="smiles_input"' in page                       # step two now open
@@ -190,6 +194,27 @@ def test_predict_renders_scores_in_plain_language(client, monkeypatch):
     assert "MW 222.0" in page                             # Lipinski values are shown
     assert "all 4 rules pass" in page
     assert "bogus" in page                                # unparseable input reported
+
+
+def test_candidates_and_known_inhibitors_are_comparable_on_one_axis(client, monkeypatch):
+    """The point of the results page is the comparison, so both sets share it.
+
+    One table and one chart, with each row saying which set it belongs to -- the
+    previous two separate tables could not be read off against each other.
+    """
+    monkeypatch.setattr(flask_app.structure_view, "build", lambda pdb_id: _view())
+    monkeypatch.setattr(flask_app.predict_pipeline, "screen",
+                        lambda candidates, pdb_id: _result())
+    page = client.post("/predict", data={"target_pdb": "3HS4",
+                                         "smiles_input": "CCO"}).data.decode()
+
+    assert page.count('id="resultTable"') == 1, "one table, not two"
+    assert 'data-kind="candidate"' in page and 'data-kind="reference"' in page
+    assert "cmp-bar" in page                              # the side-by-side chart
+    assert "2nd" in page and "of 2" in page               # where the best one lands
+    # Both sets are scored by the same model, which the page has to say for the
+    # comparison to be honest.
+    assert "the known inhibitors included" in page
 
 
 def test_predict_withholds_the_score_when_the_isoform_is_not_scored(client, monkeypatch):

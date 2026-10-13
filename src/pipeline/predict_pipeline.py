@@ -66,12 +66,15 @@ def _reference_rows(structure):
     return rows, note
 
 
-def _score_rows(entries, isoform):
+def _score_rows(entries, isoform, kind):
     """Predicts and scores a list of {'name', 'smiles', ...} against one isoform.
 
     Returns (rows, skipped). Rows carry the 0-10 score when the isoform has a
     reference distribution and None when it does not; nothing is invented for
     the isoforms with no bioactivity data.
+
+    `kind` is 'candidate' or 'reference' and travels with the row, so the two
+    sets can be put on one axis and still be told apart.
     """
     X, valid = features([e["smiles"] for e in entries], isoform)
     parsed = set(valid)
@@ -89,6 +92,7 @@ def _score_rows(entries, isoform):
         admet = admet_engine.evaluate(smiles) or {}
         row = {
             **entry,
+            "kind": kind,
             "Predicted_pIC50": round(pic50, 2),
             "IC50_nM": round(10 ** (9 - pic50), 2),
             "ADMET_QED": admet.get("QED"),
@@ -115,6 +119,32 @@ def _score_rows(entries, isoform):
     return rows, skipped
 
 
+def _ranking(novel_rows, reference_rows):
+    """Where the best candidate falls among this isoform's known inhibitors.
+
+    Both sets are scored by the same model, so this is a prediction-against-
+    prediction comparison rather than prediction-against-measurement. That is
+    the only fair way to rank them on one axis, and the UI says so.
+
+    Returns None when there is nothing to compare: an isoform whose potency is
+    withheld, or a structure with no references retrieved.
+    """
+    scored = [r for r in novel_rows if r["score"] is not None]
+    refs = [r for r in reference_rows if r["score"] is not None]
+    if not scored or not refs:
+        return None
+    best = scored[0]
+    stronger = sum(1 for r in refs if r["Predicted_pIC50"] > best["Predicted_pIC50"])
+    return {
+        "name": best["name"],
+        "score": best["score"],
+        "rank": stronger + 1,
+        "of": len(refs) + 1,
+        "beats": len(refs) - stronger,
+        "references": len(refs),
+    }
+
+
 def screen(candidates, pdb_id):
     """Screens `candidates` against the structure `pdb_id`.
 
@@ -125,8 +155,8 @@ def screen(candidates, pdb_id):
     isoform = structure["isoform"]
 
     references, reference_note = _reference_rows(structure)
-    novel_rows, skipped = _score_rows(candidates, isoform)
-    reference_rows, reference_skipped = _score_rows(references, isoform)
+    novel_rows, skipped = _score_rows(candidates, isoform, "candidate")
+    reference_rows, reference_skipped = _score_rows(references, isoform, "reference")
 
     return {
         "structure": structure,
@@ -135,6 +165,7 @@ def screen(candidates, pdb_id):
         "refs": reference_rows,
         "reference_note": reference_note,
         "skipped": skipped + reference_skipped,
+        "ranking": _ranking(novel_rows, reference_rows),
         "scored": isoform.is_scored,
         "scale": scoring.describe_scale(isoform),
     }
