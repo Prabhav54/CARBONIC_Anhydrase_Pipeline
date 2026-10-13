@@ -2,9 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "app.py": {
-      "memory": 2048,
       "maxDuration": 300,
-      "excludeFiles": "{artifacts/structures/**,artifacts/docking/**,artifacts/data/**,artifacts/md/**,artifacts/*.pkl,artifacts/*.h5,artifacts/*.csv,docking_results/**,notebook/**,data_curation_scripts/**,src/analysis/**,src/components/**,logs/**,tests/**,.venv/**,venv/**,.vscode/**,**/__pycache__/**,*.egg-info/**}"
+      "excludeFiles": "{artifacts/structures/**,artifacts/data/**,artifacts/md/**,artifacts/docking/**,artifacts/dockingx/**,artifacts/*.pkl,artifacts/*.h5,artifacts/*.csv,docking_results/**,notebook/**,tests/**,data_curation_scripts/**,src/analysis/**,src/components/**,logs/**}"
     }
   }
 }

@@ -1,0 +1,11 @@
+# The vendored AutoGrid executable and its GCC runtime libraries are binaries.
+# Git's autocrlf would otherwise be free to rewrite bytes in them on checkout,
+# which corrupts the binary and breaks docking in a way that looks like a
+# mysterious runtime crash.
+src/bin/** binary
+*.so binary
+*.so.* binary
+*.pkl binary
+*.h5 binary
+*.npz binary
+*.pdbqt text eol=lf

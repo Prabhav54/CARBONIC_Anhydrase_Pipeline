@@ -1,0 +1,71 @@
+{
+  "split": "grouped by molecule (GroupShuffleSplit, test_size=0.2, seed 42)",
+  "n_features": 1028,
+  "overall": {
+    "n_test": 6250,
+    "r2": 0.6705,
+    "mae": 0.4866
+  },
+  "per_isoform": {
+    "CA I": {
+      "n_test": 1497,
+      "r2": 0.6184,
+      "mae": 0.4615
+    },
+    "CA II": {
+      "n_test": 1680,
+      "r2": 0.6448,
+      "mae": 0.5063
+    },
+    "CA III": {
+      "n_test": 16,
+      "r2": 0.0591,
+      "mae": 0.3758
+    },
+    "CA IV": {
+      "n_test": 298,
+      "r2": 0.6536,
+      "mae": 0.4957
+    },
+    "CA IX": {
+      "n_test": 1217,
+      "r2": 0.6302,
+      "mae": 0.4804
+    },
+    "CA VA": {
+      "n_test": 101,
+      "r2": 0.4571,
+      "mae": 0.5
+    },
+    "CA VB": {
+      "n_test": 74,
+      "r2": 0.5365,
+      "mae": 0.5099
+    },
+    "CA VI": {
+      "n_test": 35,
+      "r2": 0.1645,
+      "mae": 0.5499
+    },
+    "CA VII": {
+      "n_test": 252,
+      "r2": 0.5731,
+      "mae": 0.5466
+    },
+    "CA XII": {
+      "n_test": 950,
+      "r2": 0.6216,
+      "mae": 0.4764
+    },
+    "CA XIII": {
+      "n_test": 20,
+      "r2": 0.7123,
+      "mae": 0.4376
+    },
+    "CA XIV": {
+      "n_test": 110,
+      "r2": 0.6584,
+      "mae": 0.4982
+    }
+  }
+}

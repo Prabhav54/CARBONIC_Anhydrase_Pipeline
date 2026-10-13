@@ -5,3 +5,9 @@ numpy==2.2.6
 rdkit==2025.3.6
 requests==2.32.4
 vina==1.2.7
+
+# Receptor protonation and partial charges, at request time. This replaced the
+# `obabel` CLI, which is a conda package and therefore cannot be deployed: that
+# is what used to limit the app to eight pre-prepared structures.
+# Pulls in propka, mmcif-pdbx and docutils; about 8 MB in total.
+pdb2pqr==3.7.1

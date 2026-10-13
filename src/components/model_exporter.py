@@ -15,6 +15,7 @@ import h5py
 import joblib
 import numpy as np
 
+from src.components.data_transformation import PROTEIN_FEATURE_COLUMNS
 from src.exception import CustomException
 from src.logger import logging
 
@@ -82,7 +83,16 @@ def export_ensemble(rf_path=RF_PATH, scaler_path=SCALER_PATH, lstm_path=LSTM_PAT
             **_lstm_arrays(lstm_path),
             "scaler_mean": scaler.mean_,
             "scaler_scale": scaler.scale_,
+            # The serving code checks its feature vector against this, so a
+            # retrain that changes the input layout fails loudly instead of
+            # silently scoring the wrong columns.
+            "n_features": np.array(int(rf.n_features_in_)),
+            "protein_features": np.array(PROTEIN_FEATURE_COLUMNS),
         }
+        if int(rf.n_features_in_) != scaler.mean_.shape[0]:
+            raise ValueError(
+                f"forest expects {rf.n_features_in_} features but the scaler was "
+                f"fitted on {scaler.mean_.shape[0]}")
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         np.savez_compressed(out_path, **arrays)
         logging.info(f"Exported serving ensemble to {out_path}")

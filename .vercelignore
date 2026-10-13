@@ -13,6 +13,7 @@ __pycache__
 # Offline data and tooling the deployed app never touches.
 artifacts/structures
 artifacts/docking
+artifacts/dockingx
 artifacts/data
 artifacts/md
 artifacts/*.pkl
@@ -24,4 +25,7 @@ data_curation_scripts
 tests
 src/analysis
 src/components
-src/bin
+
+# src/bin is NOT excluded: it holds the AutoGrid binary and the GCC runtime
+# libraries that build the zinc maps at request time. Neither is pip-installable,
+# so leaving them out of the upload breaks docking entirely.

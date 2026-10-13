@@ -13,3 +13,5 @@ catboost_info/
 *.sh
 artifacts/md/*_run/
 artifacts/md/_dev_run/
+
+.vercel

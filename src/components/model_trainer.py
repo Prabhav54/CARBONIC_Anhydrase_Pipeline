@@ -2,6 +2,7 @@ import os
 import sys
 import joblib
 import numpy as np
+import tensorflow as tf
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
@@ -42,6 +43,11 @@ class ModelTrainer:
             logging.info("Starting Model Training Pipeline...")
             os.makedirs("artifacts", exist_ok=True)
 
+            # The forest is seeded but Keras was not, so repeated runs moved the
+            # reported R2 by about 0.02. The README quotes that number, and a
+            # quoted number should be one anybody can reproduce.
+            tf.keras.utils.set_random_seed(42)
+
             # --- 1. Train & Save Scaler ---
             print("   -> Fitting StandardScaler...")
             scaler = StandardScaler()
@@ -53,7 +59,11 @@ class ModelTrainer:
 
             # --- 2. Train & Save Random Forest ---
             print("   -> Training Random Forest Regressor (This might take a minute)...")
-            rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+            # n_jobs does not change the fitted forest: with random_state fixed,
+            # the trees are identical and only the order they are built in
+            # differs. The dataset is now 31k x 1028, where single-core training
+            # takes tens of minutes.
+            rf_model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
             rf_model.fit(X_train, y_train) 
             
             joblib.dump(rf_model, self.trainer_config.rf_model_path)

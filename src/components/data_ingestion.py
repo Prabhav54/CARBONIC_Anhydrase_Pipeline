@@ -2,7 +2,7 @@ import os
 import sys
 import pandas as pd
 from dataclasses import dataclass
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupShuffleSplit
 
 from src.logger import logging
 from src.exception import CustomException
@@ -39,9 +39,25 @@ class DataIngestion:
             # 2. Create the artifacts directory
             os.makedirs(os.path.dirname(self.ingestion_config.train_data_path), exist_ok=True)
 
-            # 3. Train/Test Split (80/20)
-            logging.info("Initiating Train-Test Split (80/20)...")
-            train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
+            # 3. Train/Test Split (80/20), grouped by molecule.
+            #
+            # A plain random split leaks: 8,825 measurements cover only 8,172
+            # distinct molecules, because 653 of them were measured against more
+            # than one isoform. Splitting rows at random puts the same molecule
+            # in both sets, and the test score then partly measures memorisation
+            # of molecules the model has already seen. Grouping by SMILES means
+            # every test molecule is genuinely unseen. This lowers the reported
+            # R2 and makes it mean something.
+            logging.info("Initiating Train-Test Split (80/20), grouped by molecule...")
+            splitter = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+            train_idx, test_idx = next(splitter.split(df, groups=df["clean_smiles"]))
+            train_set, test_set = df.iloc[train_idx], df.iloc[test_idx]
+
+            shared = set(train_set["clean_smiles"]) & set(test_set["clean_smiles"])
+            assert not shared, f"{len(shared)} molecules leaked across the split"
+            logging.info(f"Split: {len(train_set)} train / {len(test_set)} test "
+                         f"measurements over {train_set['clean_smiles'].nunique()} / "
+                         f"{test_set['clean_smiles'].nunique()} distinct molecules")
 
             # 4. Save to artifacts so the Transformation script can pick them up
             train_set.to_csv(self.ingestion_config.train_data_path, index=False, header=True)

@@ -1,429 +1,887 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CA-Predictor</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CA-Predictor</title>
+<meta name="description" content="Screen molecules against any human carbonic anhydrase structure: predicted potency out of 10, drug-likeness, and zinc-aware AutoDock4Zn docking.">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/smiles-drawer@2.1.7/dist/smiles-drawer.min.js" defer></script>
+<style>
+/* One accent (teal), one neutral family (warm grey), one radius scale:
+   12px panels, 8px inputs and tiles, 999px chips and buttons. */
+:root {
+  color-scheme: light;
+  --bg: #f6f6f4;
+  --surface: #ffffff;
+  --surface-2: #fafaf8;
+  --surface-3: #f0efec;
+  --border: #e4e3df;
+  --border-strong: #cdcbc5;
+  --text: #1b1b19;
+  --text-2: #595852;
+  --text-3: #8a8982;
+  --accent: #0f766e;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2f0ee;
+  --accent-line: #9ccfc8;
+  --warn: #8a5a00;
+  --warn-soft: #fdf4e4;
+  --danger: #a3302a;
+  --danger-soft: #fbeceb;
+  --ok: #1f6d45;
+  --ok-soft: #e6f2ea;
+  --r-panel: 12px;
+  --r-tile: 8px;
+  --shadow: 0 1px 2px rgba(27,27,25,.05), 0 10px 28px -14px rgba(27,27,25,.16);
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #16161a;
+    --surface: #1e1e23;
+    --surface-2: #25252b;
+    --surface-3: #2c2c33;
+    --border: #32323a;
+    --border-strong: #46464f;
+    --text: #f2f1ef;
+    --text-2: #b5b4af;
+    --text-3: #8b8a83;
+    --accent: #4fb9ab;
+    --accent-ink: #10231f;
+    --accent-soft: #1b3734;
+    --accent-line: #2f5f59;
+    --warn: #e2b369;
+    --warn-soft: #30261a;
+    --danger: #ec8d87;
+    --danger-soft: #3a1f1e;
+    --ok: #74c89a;
+    --ok-soft: #1c3328;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.55);
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+a { color: var(--accent); text-underline-offset: 2px; }
+h1,h2,h3 { margin: 0; letter-spacing: -.012em; }
+h1 { font-size: 1.22rem; font-weight: 650; }
+h2 { font-size: 1.02rem; font-weight: 620; }
+h3 { font-size: .82rem; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); }
+p { margin: 0; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--text-2); }
+.small { font-size: .82rem; }
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/smiles-drawer@2.1.7/dist/smiles-drawer.min.js"></script>
+header.masthead { border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 30; }
+.masthead-inner { display: flex; align-items: center; gap: 13px; min-height: 60px; }
+.mark { width: 28px; height: 28px; border-radius: var(--r-tile); background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font: 650 12px/1 var(--mono); flex: none; }
+.masthead p { color: var(--text-2); font-size: .82rem; }
 
-    <style>
-        :root {
-            --bg-color: #f0f4f8;
-            --card-bg: #ffffff;
-            --primary: #1e3a8a;
-            --accent: #3b82f6;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-        }
-        body { background-color: var(--bg-color); font-family: 'Inter', sans-serif; color: var(--text-main); }
-        .main-container { max-width: 1600px; margin: 2rem auto; padding: 0 20px; }
+main { padding: 22px 0 72px; }
 
-        .header-card {
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
-            color: white; border-radius: 16px; padding: 2rem 2.5rem; margin-bottom: 1.5rem;
-            box-shadow: 0 10px 30px rgba(30, 58, 138, 0.15);
-        }
-        .header-card h2 { font-weight: 800; letter-spacing: -0.5px; margin-bottom: 5px; }
-        .header-card p { color: #94a3b8; font-weight: 500; margin: 0; }
+/* Step scaffolding: the numbered rail is the page's backbone. */
+.step { display: grid; grid-template-columns: 30px 1fr; gap: 14px; margin-bottom: 20px; }
+.step-rail { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.step-no { width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; font: 650 13px/1 var(--mono); border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-3); flex: none; }
+.step.done .step-no { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.step.active .step-no { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.step-line { flex: 1; width: 1px; background: var(--border); min-height: 10px; }
+.step-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 9px; }
+.step-head .hint { color: var(--text-3); font-size: .82rem; }
+.step.locked { opacity: .55; }
+@media (max-width: 700px) { .step { grid-template-columns: 1fr; } .step-rail { flex-direction: row; } .step-line { display: none; } }
 
-        .panel {
-            background: var(--card-bg); border-radius: 16px; padding: 1.5rem 2rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 1.5rem; border: 1px solid var(--border);
-        }
-        .panel h5 { font-weight: 700; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); box-shadow: var(--shadow); overflow: hidden; }
+.panel + .panel { margin-top: 14px; }
+.panel-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.panel-head .note { color: var(--text-3); font-size: .8rem; }
+.panel-body { padding: 16px; }
+.panel-split { border-top: 1px solid var(--border); }
 
-        .viewer-box { background: #f8fafc; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); height: 520px; position: relative; }
-        .viewer-caption { font-size: 0.8rem; color: var(--text-muted); }
+/* Inputs */
+.field { display: grid; gap: 6px; }
+label { font-size: .82rem; font-weight: 600; }
+.help { font-size: .78rem; color: var(--text-3); }
+input[type=text], textarea {
+  width: 100%; padding: 10px 12px; background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: var(--r-tile); font: 14px/1.5 var(--sans);
+}
+input[type=text] { font-family: var(--mono); text-transform: uppercase; letter-spacing: .14em; font-size: 1rem; font-weight: 600; }
+textarea { font-family: var(--mono); font-size: 12.5px; min-height: 132px; resize: vertical; }
+input::placeholder, textarea::placeholder { color: var(--text-3); letter-spacing: normal; font-weight: 400; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.row .field { flex: 1 1 200px; }
 
-        .table-custom th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; }
-        .table-custom td { vertical-align: middle; border-bottom: 1px solid #f8fafc; padding: 14px 10px; }
+button { font: 600 14px/1 var(--sans); border-radius: 999px; border: 1px solid transparent; padding: 11px 20px; cursor: pointer; transition: background-color .15s, border-color .15s, transform .08s; }
+button:active { transform: translateY(1px); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover { background: color-mix(in srgb, var(--accent) 86%, black); }
+.btn-ghost { background: transparent; color: var(--text); border-color: var(--border-strong); padding: 6px 13px; font-size: 12.5px; }
+.btn-ghost:hover { background: var(--surface-2); border-color: var(--accent); }
+.btn-ghost[disabled] { opacity: .5; cursor: default; }
+.btn-ghost.on { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+.suggest { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+.suggest form { display: inline; }
+.suggest button { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); font: 600 12px/1 var(--mono); padding: 6px 11px; }
+.suggest button:hover { border-color: var(--accent); color: var(--accent); }
+.suggest button span { font-family: var(--sans); font-weight: 400; color: var(--text-3); margin-left: 6px; }
 
-        .mol-img-container { position: relative; width: 120px; height: 60px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 8px; border: 1px solid #f1f5f9; }
-        .mol-img-container img { max-width: 100%; max-height: 100%; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .mol-img-container:hover img { transform: scale(1.8); z-index: 100; position: relative; background: white; padding: 5px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+/* Chips */
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font: 600 11.5px/1.75 var(--sans); white-space: nowrap; border: 1px solid transparent; }
+.chip-accent { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+.chip-ok { background: var(--ok-soft); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 28%, transparent); }
+.chip-warn { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 28%, transparent); }
+.chip-plain { background: var(--surface-3); color: var(--text-2); border-color: var(--border); }
+.chip-lg { font-size: 12.5px; padding: 4px 11px; }
 
-        .metric-mono { font-family: 'Roboto Mono', monospace; font-weight: 700; color: var(--primary); font-size: 1.1rem; }
-        .metric-sub { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
-        .score-bar-bg { height: 6px; width: 100%; background: var(--border); border-radius: 10px; margin-top: 6px; overflow: hidden; }
-        .score-bar-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #06b6d4); border-radius: 10px; }
+.message { border-radius: var(--r-panel); padding: 13px 16px; font-size: .88rem; margin-bottom: 16px; }
+.message-error { background: var(--danger-soft); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); }
+.message-warn { background: var(--warn-soft); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 28%, transparent); }
 
-        .badge-qed { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-family: 'Roboto Mono', monospace; }
-        .badge-qed.high { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
-        .dock-score { font-family: 'Roboto Mono', monospace; font-weight: 700; color: #059669; }
-        .tooltip-trigger { border-bottom: 1px dashed #cbd5e1; cursor: help; }
+/* Structure header */
+.structure-top { display: grid; grid-template-columns: 180px 1fr; gap: 16px; }
+@media (max-width: 760px) { .structure-top { grid-template-columns: 1fr; } }
+.struct-img { width: 180px; height: 180px; border-radius: var(--r-tile); border: 1px solid var(--border); background: var(--surface-3); object-fit: cover; display: block; }
+.struct-id { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.struct-id .pdb { font: 650 1.5rem/1 var(--mono); letter-spacing: .02em; }
+.struct-title { color: var(--text-2); font-size: .88rem; margin-bottom: 10px; }
+.facts { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--border); border-radius: var(--r-tile); overflow: hidden; }
+.fact { padding: 8px 12px; flex: 1 1 110px; border-right: 1px solid var(--border); background: var(--surface-2); }
+.fact:last-child { border-right: 0; }
+.fact dt { color: var(--text-3); font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; }
+.fact dd { margin: 2px 0 0; font-size: .86rem; font-weight: 550; }
 
-        .btn-action { width: 100%; border-radius: 8px; font-weight: 600; font-size: 0.8rem; padding: 8px; transition: all 0.2s; border: none; }
-        .btn-dock { background-color: #10b981; color: white; margin-bottom: 6px; }
-        .btn-dock:hover:not(:disabled) { background-color: #059669; }
-        .btn-dock:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-pubchem { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; text-decoration: none; display: block; text-align: center; }
-        .btn-pubchem:hover { background-color: var(--border); color: #0f172a; }
+/* Why this matters */
+.claim { display: grid; gap: 4px; padding: 11px 0; border-top: 1px dashed var(--border); }
+.claim:first-child { border-top: 0; padding-top: 0; }
+.claim-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 650; }
+.claim-body { font-size: .86rem; color: var(--text-2); }
+.claim-body b { color: var(--text); font-weight: 600; }
+.drug-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; }
 
-        .smiles-input { font-family: 'Roboto Mono', monospace; font-size: 0.85rem; }
-        .method-note { font-size: 0.8rem; color: var(--text-muted); background: #f8fafc; border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 6px; }
+/* 3D site */
+.site-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .site-grid { grid-template-columns: 1fr; } }
+#viewer3d { width: 100%; height: 330px; border: 1px solid var(--border); border-radius: var(--r-tile); background: var(--surface-2); position: relative; }
+.viewer-controls { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 9px; }
+.viewer-legend { display: flex; gap: 13px; flex-wrap: wrap; font-size: .76rem; color: var(--text-3); margin-top: 8px; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.residues { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.res { font: 550 11.5px/1.75 var(--mono); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; background: var(--surface-2); color: var(--text-2); }
+.res.coord { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+.kv { font-family: var(--mono); font-size: .78rem; color: var(--text-2); line-height: 1.75; }
 
-        #loadingOverlay { display: none; position: fixed; inset: 0; background: rgba(240, 244, 248, 0.88); backdrop-filter: blur(5px); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
-        .loader-mol { width: 60px; height: 60px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
+/* Summary strip */
+.summary { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--border); border-radius: var(--r-panel); overflow: hidden; background: var(--surface); box-shadow: var(--shadow); margin-bottom: 14px; }
+.summary-cell { flex: 1 1 150px; padding: 13px 16px; border-right: 1px solid var(--border); }
+.summary-cell:last-child { border-right: 0; }
+.summary-cell .k { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 650; }
+.summary-cell .v { font: 650 1.3rem/1.2 var(--mono); margin-top: 3px; }
+.summary-cell .v small { font-family: var(--sans); font-size: .72rem; font-weight: 500; color: var(--text-3); margin-left: 4px; }
+.summary-cell.hero { background: var(--accent-soft); }
+.summary-cell.hero .k { color: var(--accent); }
+.summary-cell.hero .v { color: var(--accent); }
+
+/* Tables */
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+thead th { text-align: left; padding: 9px 12px; white-space: nowrap; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); font-weight: 650; border-bottom: 1px solid var(--border-strong); }
+thead th.r, td.r { text-align: right; }
+tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: var(--surface-2); }
+tbody tr.best td { background: var(--accent-soft); }
+tbody tr.best:hover td { background: color-mix(in srgb, var(--accent-soft) 80%, var(--accent)); }
+.mol { width: 104px; height: 54px; display: block; }
+.mol-fallback { font-family: var(--mono); font-size: 10px; color: var(--text-3); word-break: break-all; max-width: 120px; display: block; }
+.cand-name { font-weight: 600; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.cand-sub { color: var(--text-3); font-size: .76rem; margin-top: 2px; }
+.score-cell { white-space: nowrap; }
+.score-v { font: 650 1.45rem/1 var(--mono); color: var(--accent); }
+.score-v small { font-family: var(--sans); font-size: .7rem; font-weight: 600; color: var(--text-3); }
+.score-why { font-size: .72rem; color: var(--text-3); margin-top: 3px; max-width: 190px; white-space: normal; }
+.withheld { color: var(--text-3); font-size: .8rem; font-style: italic; }
+.lip { display: flex; gap: 3px; flex-wrap: wrap; }
+.lip i { font-style: normal; font: 600 10px/1.7 var(--mono); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); }
+.lip i.fail { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+.lip-verdict { font-size: .72rem; margin-top: 3px; }
+
+/* Legend / explainers */
+details.explain { border: 1px solid var(--border); border-radius: var(--r-panel); background: var(--surface); margin-top: 14px; }
+details.explain > summary { cursor: pointer; padding: 12px 16px; font-size: .86rem; font-weight: 600; }
+details.explain[open] > summary { border-bottom: 1px solid var(--border); }
+.explain-body { padding: 14px 16px; display: grid; gap: 12px; font-size: .85rem; color: var(--text-2); }
+.explain-body b { color: var(--text); }
+.scale-bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+.scale-bar span { flex: 1; }
+.scale-ticks { display: flex; justify-content: space-between; font: 500 .7rem var(--mono); color: var(--text-3); margin-top: 4px; }
+.iso-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.iso { border: 1px solid var(--border); border-radius: var(--r-tile); padding: 9px 11px; background: var(--surface-2); }
+.iso .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.iso b { font-size: .84rem; }
+.iso small { color: var(--text-3); font-size: .73rem; display: block; margin-top: 2px; line-height: 1.45; }
+
+/* Dock dialog */
+dialog { border: 1px solid var(--border); border-radius: var(--r-panel); padding: 0; background: var(--surface); color: var(--text); width: min(920px, calc(100vw - 28px)); max-height: calc(100vh - 44px); box-shadow: 0 24px 64px -24px rgba(0,0,0,.5); }
+dialog::backdrop { background: rgba(18,18,16,.58); }
+.dialog-head { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--border); }
+.dialog-head h2 { flex: 1; }
+.dialog-body { padding: 16px; overflow-y: auto; max-height: calc(100vh - 140px); }
+#poseViewer { width: 100%; height: 300px; border: 1px solid var(--border); border-radius: var(--r-tile); background: var(--surface-2); position: relative; }
+
+.spinner { width: 13px; height: 13px; border-radius: 50%; border: 2px solid color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; display: inline-block; vertical-align: -2px; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.overlay { position: fixed; inset: 0; z-index: 50; display: none; place-items: center; background: color-mix(in srgb, var(--bg) 82%, transparent); }
+.overlay.on { display: grid; }
+.overlay .box { display: flex; align-items: center; gap: 11px; font-weight: 600; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); padding: 14px 20px; box-shadow: var(--shadow); }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+</style>
 </head>
 <body>
 
-<div id="loadingOverlay">
-    <div class="loader-mol"></div>
-    <h3 class="fw-bold" style="color: var(--primary);">Scoring candidates…</h3>
-    <p class="text-muted fw-medium">Running the potency model and drug-likeness filters</p>
-</div>
-
-<div class="main-container">
-
-    <div class="header-card">
-        <h2><i class="fa-solid fa-network-wired me-3 text-info"></i>CA-Predictor</h2>
-        <p>Virtual screening for carbonic anhydrase inhibitors</p>
-    </div>
-
-    <div class="panel">
-        <form action="/predict" method="POST" onsubmit="document.getElementById('loadingOverlay').style.display='flex';">
-            <div class="row g-3">
-                <div class="col-lg-3">
-                    <label class="form-label fw-semibold small text-uppercase text-muted">Target structure</label>
-                    <select name="target_pdb" class="form-select" id="targetSelect">
-                        {% for pdb_id, meta in targets.items() %}
-                        <option value="{{ pdb_id }}" {% if pdb_id == target_pdb %}selected{% endif %}>
-                            {{ pdb_id }} — {{ meta.isoform }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <p class="method-note mt-3 mb-0">
-                        Potency comes from a Random Forest + LSTM model trained on ChEMBL IC50 data.
-                        Docking runs AutoDock Vina with the AutoDock4Zn force field, which accounts for
-                        the active-site zinc that sulfonamides coordinate.
-                    </p>
-                </div>
-                <div class="col-lg-9">
-                    <label class="form-label fw-semibold small text-uppercase text-muted">
-                        Candidate molecules — one SMILES per line, optionally <code>name, smiles</code>
-                    </label>
-                    <textarea name="smiles_input" rows="7" class="form-control smiles-input" required>{{ smiles_input }}</textarea>
-                    <button type="submit" class="btn btn-primary fw-bold mt-3 px-4">
-                        <i class="fa-solid fa-bolt me-2"></i>Screen candidates
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    {% if error %}
-    <div class="alert alert-danger fw-semibold">{{ error }}</div>
-    {% endif %}
-
-    {% if skipped %}
-    <div class="alert alert-warning">
-        Could not parse {{ skipped | length }} input(s): {{ skipped | join(', ') }}
-    </div>
-    {% endif %}
-
-    <div class="row g-4">
-        <div class="col-xl-4 col-lg-5">
-            <div class="panel h-100 mb-0">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="m-0" style="color: var(--primary);"><i class="fa-solid fa-cubes-stacked me-2"></i>Receptor</h5>
-                    <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill">{{ target_pdb }}</span>
-                </div>
-                <div id="viewer" class="viewer-box"></div>
-                <p class="viewer-caption mt-2 mb-0" id="viewerCaption">
-                    Drag to rotate, scroll to zoom. The zinc ion is shown as a grey sphere.
-                </p>
-            </div>
-        </div>
-
-        <div class="col-xl-8 col-lg-7">
-            {% if novels %}
-            <div class="panel">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="m-0"><i class="fa-solid fa-flask-vial me-2 text-primary"></i>Your candidates</h5>
-                    <span class="badge bg-light text-primary border px-3 py-2 rounded-pill">{{ novels | length }} ranked</span>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-custom table-hover align-middle text-center">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Structure</th>
-                                <th class="text-start">Compound</th>
-                                <th class="text-start">Predicted potency</th>
-                                <th><span class="tooltip-trigger" title="Quantitative Estimate of Druglikeness, 0 to 1">QED</span></th>
-                                <th><span class="tooltip-trigger" title="Lipinski Rule of 5 violations; 0 is ideal">Lipinski</span></th>
-                                <th>Docking</th>
-                                <th style="width: 13%;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in novels %}
-                            <tr>
-                                <td class="fw-bold" style="color: #cbd5e1; font-size: 1.1rem;">{{ loop.index }}</td>
-                                <td>
-                                    <div class="mol-img-container mx-auto">
-                                        <canvas class="mol-canvas" data-smiles="{{ row.clean_smiles }}" width="120" height="60"></canvas>
-                                    </div>
-                                </td>
-                                <td class="text-start fw-semibold">{{ row.Molecule_Name }}</td>
-                                <td class="text-start" style="width: 20%;">
-                                    <div class="d-flex justify-content-between align-items-end">
-                                        <span class="metric-mono">{{ row.Predicted_pIC50 }}</span>
-                                        <span class="metric-sub">{{ row.IC50_nM }} nM</span>
-                                    </div>
-                                    <div class="score-bar-bg"><div class="score-bar-fill" style="width: {{ [row.Predicted_pIC50 * 10, 100] | min }}%;"></div></div>
-                                    <span class="metric-sub">pIC50</span>
-                                </td>
-                                <td><span class="badge-qed {% if row.ADMET_QED and row.ADMET_QED >= 0.5 %}high{% endif %}">{{ row.ADMET_QED }}</span></td>
-                                <td>
-                                    {% if row.Violations %}
-                                    <span class="badge bg-danger rounded-pill px-3" title="{{ row.Lipinski_Reasons }}">{{ row.Violations }}</span>
-                                    {% else %}
-                                    <span class="badge bg-light text-success border border-success rounded-pill px-3"><i class="fa-solid fa-check me-1"></i>0</span>
-                                    {% endif %}
-                                </td>
-                                <td class="dock-score" id="dock-result-{{ loop.index }}"><span class="text-muted small">not run</span></td>
-                                <td>
-                                    <button class="btn-action btn-dock"
-                                            data-smiles="{{ row.clean_smiles }}"
-                                            data-name="{{ row.Molecule_Name }}"
-                                            data-row="{{ loop.index }}"
-                                            onclick="runDocking(this)">
-                                        <i class="fa-solid fa-bullseye me-1"></i>Dock
-                                    </button>
-                                    <a href="{{ row.PubChem_Link }}" target="_blank" rel="noopener" class="btn-action btn-pubchem">
-                                        <i class="fa-solid fa-database me-1"></i>PubChem
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                <p class="method-note mb-0">
-                    Docking takes roughly 10&ndash;90 seconds per molecule and runs only when you ask for it.
-                </p>
-            </div>
-            {% endif %}
-
-            {% if refs %}
-            <div class="panel mb-0">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="m-0"><i class="fa-solid fa-check-double me-2 text-success"></i>Known inhibitors for comparison</h5>
-                    <span class="badge bg-light text-muted border px-3 py-2 rounded-pill">{{ reference_source }}</span>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-custom table-hover align-middle text-center">
-                        <thead>
-                            <tr>
-                                <th>Structure</th>
-                                <th class="text-start">Compound</th>
-                                <th class="text-start">Predicted potency</th>
-                                <th>QED</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in refs %}
-                            <tr>
-                                <td>
-                                    <div class="mol-img-container mx-auto">
-                                        <canvas class="mol-canvas" data-smiles="{{ row.clean_smiles }}" width="120" height="60"></canvas>
-                                    </div>
-                                </td>
-                                <td class="text-start fw-semibold">{{ row.Molecule_Name }}</td>
-                                <td class="text-start" style="width: 28%;">
-                                    <div class="d-flex justify-content-between align-items-end">
-                                        <span class="metric-mono">{{ row.Predicted_pIC50 }}</span>
-                                        <span class="metric-sub">{{ row.IC50_nM }} nM</span>
-                                    </div>
-                                    <div class="score-bar-bg"><div class="score-bar-fill" style="width: {{ [row.Predicted_pIC50 * 10, 100] | min }}%;"></div></div>
-                                </td>
-                                <td><span class="badge-qed {% if row.ADMET_QED and row.ADMET_QED >= 0.5 %}high{% endif %}">{{ row.ADMET_QED }}</span></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                <p class="method-note mb-0">
-                    These are measured inhibitors of this isoform. The model never saw your candidates,
-                    but it was trained on data that includes compounds like these, so treat a high score
-                    on a known drug as a sanity check rather than a discovery.
-                </p>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="dockModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #065f46 0%, #10b981 100%); color: white; border-radius: 16px 16px 0 0;">
-        <h5 class="modal-title fw-bold"><i class="fa-solid fa-bullseye me-2"></i>Docking result</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-4">
-        <div id="dockLoading" class="text-center py-4">
-            <div class="spinner-border mb-3" style="width: 3rem; height: 3rem; color: #10b981;" role="status"></div>
-            <h5 class="fw-bold">Docking <span id="dockMolName"></span>…</h5>
-            <p class="text-muted small mb-0">AutoDock Vina with the AutoDock4Zn force field. This usually takes 10&ndash;90 seconds.</p>
-        </div>
-        <div id="dockError" class="alert alert-warning d-none mb-0"></div>
-        <div id="dockResults" class="d-none">
-            <p class="mb-3">
-                <span class="fw-bold" id="dockResultName"></span>
-                against <span class="badge bg-primary" id="dockTarget"></span>
-                <span class="text-muted small" id="dockIsoform"></span>
-            </p>
-            <table class="table table-sm align-middle">
-                <thead>
-                    <tr class="text-muted small text-uppercase">
-                        <th>Pose</th>
-                        <th>Score (kcal/mol)</th>
-                        <th>Sulfonamide N &ndash; Zn</th>
-                        <th>Zinc contact</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="dockPoseRows"></tbody>
-            </table>
-            <div class="method-note">
-                A lower score means tighter predicted binding. Sulfonamide inhibitors bind carbonic
-                anhydrase by coordinating the active-site zinc, so a pose without that contact is
-                probably not the real binding mode even when it scores well. In our validation on
-                3HS4, the near-native pose (1.6&nbsp;&#8491; from the crystal structure) ranked second,
-                not first &mdash; so check the poses, not just the top score.
-            </div>
-        </div>
-      </div>
+<header class="masthead">
+  <div class="wrap masthead-inner">
+    <span class="mark" aria-hidden="true">CA</span>
+    <div>
+      <h1>CA-Predictor</h1>
+      <p>Screen molecules against any human carbonic anhydrase structure.</p>
     </div>
   </div>
+</header>
+
+<main class="wrap">
+
+  {% if error %}
+  <div class="message message-error" role="alert"><strong>Cannot do that.</strong> {{ error }}</div>
+  {% endif %}
+
+  <!-- ─────────── STEP 1: the target ─────────── -->
+  <section class="step {{ 'done' if view else 'active' }}">
+    <div class="step-rail"><span class="step-no">1</span><span class="step-line"></span></div>
+    <div>
+      <div class="step-head">
+        <h2>Choose a target structure</h2>
+        <span class="hint">The isoform decides the prediction, so it comes first.</span>
+      </div>
+
+      <div class="panel">
+        <div class="panel-body">
+          <form action="/structure" method="POST" class="row" onsubmit="showOverlay('Loading structure')">
+            <div class="field" style="max-width:260px">
+              <label for="target_pdb">PDB ID</label>
+              <input type="text" id="target_pdb" name="target_pdb" maxlength="4" required
+                     autocomplete="off" spellcheck="false" placeholder="e.g. 3HS4"
+                     value="{{ target_pdb }}">
+            </div>
+            <button type="submit" class="btn-primary">Load structure</button>
+          </form>
+          <p class="help" style="margin-top:8px">Any structure of a catalytic human CA isoform. Everything shown about it is read from the PDB entry.</p>
+          <div class="suggest">
+            <span class="help">Try:</span>
+            {% for pdb, iso, why in suggested %}
+            <form action="/structure" method="POST" onsubmit="showOverlay('Loading structure')">
+              <input type="hidden" name="target_pdb" value="{{ pdb }}">
+              <button type="submit">{{ pdb }}<span>{{ iso }}, {{ why }}</span></button>
+            </form>
+            {% endfor %}
+          </div>
+        </div>
+
+        {% if view %}
+        {% set s = view.structure %}
+        {% set iso = view.isoform %}
+        <div class="panel-body panel-split">
+          <div class="structure-top">
+            <img class="struct-img" src="{{ s.image_url }}" alt="Deposited structure of {{ s.pdb_id }}" loading="lazy"
+                 onerror="this.style.display='none'">
+            <div>
+              <div class="struct-id">
+                <span class="pdb">{{ s.pdb_id }}</span>
+                <span class="chip chip-accent chip-lg">{{ iso.label }}</span>
+                {% if view.scored %}
+                  <span class="chip chip-ok">potency scored &middot; R&sup2; {{ '%.2f'|format(iso.test_r2) }}</span>
+                {% else %}
+                  <span class="chip chip-warn">potency withheld</span>
+                {% endif %}
+                {% for l in s.ligands %}<span class="chip chip-plain">{{ l.comp_id }} bound</span>{% endfor %}
+              </div>
+              <p class="struct-title">{{ s.title }}</p>
+              <dl class="facts">
+                <div class="fact"><dt>Resolution</dt><dd>{% if s.resolution %}{{ s.resolution }} &#8491;{% else %}n/a{% endif %}</dd></div>
+                <div class="fact"><dt>Method</dt><dd>{{ (s.method or 'n/a')|title }}</dd></div>
+                <div class="fact"><dt>Deposited</dt><dd>{{ s.deposited or 'n/a' }}</dd></div>
+                <div class="fact"><dt>Gene</dt><dd>{{ iso.gene }}</dd></div>
+                <div class="fact"><dt>UniProt</dt><dd><a href="https://www.uniprot.org/uniprotkb/{{ iso.accession }}" rel="noopener">{{ iso.accession }}</a></dd></div>
+                <div class="fact"><dt>Entry</dt><dd><a href="{{ s.rcsb_url }}" rel="noopener">RCSB</a></dd></div>
+              </dl>
+            </div>
+          </div>
+        </div>
+
+        <!-- Why this target matters: three claims of different strength, kept apart -->
+        <div class="panel-body panel-split">
+          <h3 style="margin-bottom:9px">Why this target matters</h3>
+          <div class="claim">
+            <span class="claim-label">What inhibiting {{ iso.label }} is for</span>
+            <span class="claim-body">{{ iso.therapeutic }} <b class="muted">{{ iso.role|capitalize }}.</b></span>
+          </div>
+          {% if view.drugs %}
+          <div class="claim">
+            <span class="claim-label">Drugs ChEMBL records as acting on this target</span>
+            <span class="claim-body">
+              <div class="drug-list">
+                {% for d in view.drugs %}
+                <a class="chip chip-plain" href="https://www.ebi.ac.uk/chembl/compound_report_card/{{ d.chembl_id }}/" rel="noopener" title="{{ d.provenance }}">{{ d.name }}</a>
+                {% endfor %}
+              </div>
+            </span>
+          </div>
+          {% endif %}
+          {% if view.diseases %}
+          <div class="claim">
+            <span class="claim-label">Genetic disease UniProt annotates for {{ iso.gene }}</span>
+            <span class="claim-body">
+              {% for d in view.diseases %}
+              <b>{{ d.name }}{% if d.acronym %} ({{ d.acronym }}){% endif %}.</b>
+              {{ d.description }}
+              {% endfor %}
+              <em class="small">This is what variants in the gene cause, which is not the same claim as inhibiting the enzyme treating it.</em>
+            </span>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- The docking site, in 3D -->
+        {% if view.site %}
+        {% set site = view.site %}
+        <div class="panel-body panel-split">
+          <h3 style="margin-bottom:9px">Where docking will happen</h3>
+          <div class="site-grid">
+            <div>
+              <div id="viewer3d" role="img" aria-label="Interactive 3D structure of {{ s.pdb_id }} with the docking site highlighted"></div>
+              <div class="viewer-controls">
+                <button type="button" class="btn-ghost on" id="btnSite">Zoom to site</button>
+                <button type="button" class="btn-ghost" id="btnWhole">Whole protein</button>
+                <button type="button" class="btn-ghost on" id="btnBox">Search box</button>
+                <button type="button" class="btn-ghost" id="btnSpin">Spin</button>
+              </div>
+              <div class="viewer-legend">
+                <span><span class="swatch" style="background:#9aa0a6"></span>protein</span>
+                <span><span class="swatch" style="background:#8a5a00"></span>catalytic zinc</span>
+                <span><span class="swatch" style="background:#0f766e"></span>histidine triad</span>
+                <span><span class="swatch" style="background:#b06ab3"></span>pocket lining</span>
+                <span><span class="swatch" style="background:#d94f4f"></span>search box</span>
+              </div>
+            </div>
+            <div>
+              <p class="kv">
+                chain <b>{{ site.chain }}</b>{% if site.zinc_count > 1 %} (of {{ site.zinc_count }} zinc sites){% endif %}<br>
+                box centre {{ site.box_centre[0] }}, {{ site.box_centre[1] }}, {{ site.box_centre[2] }}<br>
+                box size {{ site.box_size[0]|int }} &times; {{ site.box_size[1]|int }} &times; {{ site.box_size[2]|int }} &#8491;
+              </p>
+              <div style="margin-top:12px">
+                <span class="claim-label">Zinc held by</span>
+                <div class="residues">
+                  {% for r in site.coordinating_residues %}
+                  <span class="res coord">{{ r.name }}{{ r.number }} {{ r.atom }} {{ r.distance }}&#8491;</span>
+                  {% endfor %}
+                </div>
+              </div>
+              <div style="margin-top:12px">
+                <span class="claim-label">Pocket lining, within 8 &#8491;</span>
+                <div class="residues">
+                  {% for r in site.pocket_residues %}<span class="res">{{ r.name }}{{ r.number }}</span>{% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% elif view.site_error %}
+        <div class="panel-body panel-split">
+          <div class="message message-warn" style="margin:0"><strong>No dockable site.</strong> {{ view.site_error }}</div>
+        </div>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── STEP 2: the molecules ─────────── -->
+  <section class="step {{ 'active' if view and not result else ('done' if result else 'locked') }}">
+    <div class="step-rail"><span class="step-no">2</span>{% if result %}<span class="step-line"></span>{% endif %}</div>
+    <div>
+      <div class="step-head">
+        <h2>Screen molecules{% if view %} against {{ view.structure.pdb_id }}{% endif %}</h2>
+        {% if not view %}<span class="hint">Load a structure first.</span>{% endif %}
+      </div>
+      <div class="panel">
+        <div class="panel-body">
+          {% if view %}
+          <form action="/predict" method="POST" onsubmit="showOverlay('Scoring candidates')">
+            <input type="hidden" name="target_pdb" value="{{ view.structure.pdb_id }}">
+            <div class="field">
+              <label for="smiles_input">Candidate molecules, as SMILES</label>
+              <textarea id="smiles_input" name="smiles_input" spellcheck="false"
+                        placeholder="One SMILES per line, optionally `name, SMILES`">{{ smiles_input }}</textarea>
+              <span class="help">One per line. Prefix with a name and a comma to label it.</span>
+            </div>
+            <div style="margin-top:12px">
+              <button type="submit" class="btn-primary">Score against {{ view.isoform.label }}</button>
+            </div>
+          </form>
+          {% else %}
+          <p class="muted small">Once a structure is loaded, paste your molecules here and they will be scored against that isoform.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── RESULTS ─────────── -->
+  {% if result %}
+  {% set iso = result.isoform %}
+  <section class="step active">
+    <div class="step-rail"><span class="step-no">3</span></div>
+    <div>
+      <div class="step-head">
+        <h2>Results</h2>
+        <span class="hint">Ranked against {{ iso.label }}.</span>
+      </div>
+
+      {% set passing = result.novels | selectattr('Lipinski_Pass') | list %}
+      {% set scored_rows = result.novels | selectattr('score') | list %}
+      <div class="summary">
+        <div class="summary-cell">
+          <div class="k">Screened</div>
+          <div class="v">{{ result.novels|length }}<small>molecules</small></div>
+        </div>
+        {% if scored_rows %}
+        <div class="summary-cell hero">
+          <div class="k">Best predicted</div>
+          <div class="v">{{ '%.1f'|format(scored_rows[0].score) }}<small>/ 10</small></div>
+          <div class="small" style="color:var(--accent)">{{ scored_rows[0].name }}</div>
+        </div>
+        {% endif %}
+        <div class="summary-cell">
+          <div class="k">Pass Lipinski</div>
+          <div class="v">{{ passing|length }}<small>of {{ result.novels|length }}</small></div>
+          <div class="small muted">{{ (passing | map(attribute='name') | join(', '))[:60] or 'none' }}</div>
+        </div>
+        <div class="summary-cell">
+          <div class="k">Reference set</div>
+          <div class="v">{{ result.refs|length }}<small>known</small></div>
+          <div class="small muted">{{ iso.label }} inhibitors from ChEMBL</div>
+        </div>
+      </div>
+
+      {% macro table(items, kind) %}
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:114px">Structure</th>
+              <th>Molecule</th>
+              <th style="width:200px">Predicted potency</th>
+              <th class="r" style="width:76px">pAff</th>
+              <th class="r" style="width:92px">nM</th>
+              <th style="width:150px">Lipinski</th>
+              <th class="r" style="width:58px">QED</th>
+              <th style="width:96px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in items %}
+            <tr {% if kind == 'candidate' and loop.first and row.score is not none %}class="best"{% endif %}>
+              <td><canvas class="mol" data-smiles="{{ row.smiles }}" width="104" height="54"></canvas></td>
+              <td>
+                <div class="cand-name">
+                  {{ row.name }}
+                  {% if kind == 'candidate' and loop.first and row.score is not none %}<span class="chip chip-accent">best</span>{% endif %}
+                </div>
+                <div class="cand-sub">
+                  {% if kind == 'reference' %}{{ row.provenance }}{% endif %}
+                  {% if row.chembl_id %}<a href="https://www.ebi.ac.uk/chembl/compound_report_card/{{ row.chembl_id }}/" rel="noopener">{{ row.chembl_id }}</a>{% endif %}
+                  {% if kind != 'reference' %}<a href="{{ row.PubChem_Link }}" rel="noopener">PubChem</a>{% endif %}
+                </div>
+              </td>
+              <td class="score-cell">
+                {% if row.score is not none %}
+                  <span class="score-v">{{ '%.1f'|format(row.score) }}<small> / 10</small></span>
+                  <div class="score-why">stronger than <b>{{ row.percentile }}%</b> of known {{ iso.label }} inhibitors</div>
+                {% else %}
+                  <span class="withheld">not scored</span>
+                  <div class="score-why">{{ result.scale }}</div>
+                {% endif %}
+              </td>
+              <td class="r num">{{ '%.2f'|format(row.Predicted_pIC50) }}</td>
+              <td class="r num">{{ '{:,.0f}'.format(row.IC50_nM) if row.IC50_nM >= 1 else '%.2f'|format(row.IC50_nM) }}</td>
+              <td>
+                <div class="lip">
+                  {% for c in row.Lipinski %}
+                  <i class="{{ '' if c.passed else 'fail' }}" title="{{ c.name }} {{ c.value }} (limit {{ c.limit }})">{{ c.short }} {{ c.value }}</i>
+                  {% endfor %}
+                </div>
+                <div class="lip-verdict">
+                  {% if row.Violations == 0 %}<span class="chip chip-ok">all 4 rules pass</span>
+                  {% elif row.Lipinski_Pass %}<span class="chip chip-plain">1 violation, still drug-like</span>
+                  {% else %}<span class="chip chip-warn">{{ row.Violations }} violations</span>{% endif %}
+                </div>
+              </td>
+              <td class="r num">{{ '%.2f'|format(row.ADMET_QED) }}</td>
+              <td>
+                {% if view and view.site %}
+                <button type="button" class="btn-ghost dock-btn" data-smiles="{{ row.smiles }}" data-name="{{ row.name }}">Dock</button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endmacro %}
+
+      {% if result.novels %}
+      <div class="panel">
+        <div class="panel-head"><h2>Your candidates</h2><span class="note">Highest predicted potency first.</span></div>
+        {{ table(result.novels, 'candidate') }}
+      </div>
+      {% endif %}
+
+      <div class="panel">
+        <div class="panel-head"><h2>Known {{ iso.label }} inhibitors</h2><span class="note">{{ result.reference_note }}</span></div>
+        {% if result.refs %}{{ table(result.refs, 'reference') }}
+        {% else %}<div class="panel-body"><p class="withheld">No reference inhibitors could be retrieved.</p></div>{% endif %}
+      </div>
+
+      {% if result.skipped %}
+      <div class="message message-warn" style="margin-top:14px"><strong>Skipped:</strong> {{ result.skipped|join(', ') }}. These could not be parsed as SMILES.</div>
+      {% endif %}
+
+      <details class="explain" open>
+        <summary>How to read these numbers</summary>
+        <div class="explain-body">
+          <div>
+            <b>The score out of 10 is a percentile, not a probability.</b>
+            It places the predicted affinity inside the range actually measured
+            against {{ iso.label }} in ChEMBL. 7.0 means the molecule is predicted
+            stronger than 70% of known {{ iso.label }} inhibitors; 3.0 means
+            weaker than 70% of them. It says nothing about whether the molecule is
+            safe, selective or synthesisable.
+            <div class="scale-bar" style="margin-top:8px">
+              <span style="background:var(--surface-3)"></span><span style="background:#cfe4e1"></span>
+              <span style="background:#9ccfc8"></span><span style="background:#4fa89e"></span><span style="background:var(--accent)"></span>
+            </div>
+            <div class="scale-ticks"><span>0 weakest</span><span>5 typical known inhibitor</span><span>10 strongest</span></div>
+          </div>
+          <div><b>pAff</b> is the predicted affinity as -log10(molar), pooling IC50 and Ki the way ChEMBL does; <b>nM</b> is the same number as a concentration. Lower nM is more potent.</div>
+          <div>
+            <b>Lipinski's Rule of 5</b> asks four questions about oral drug-likeness:
+            molecular weight &le; 500, LogP &le; 5, hydrogen-bond donors &le; 5,
+            acceptors &le; 10. Lipinski's own formulation tolerates one violation,
+            which is why a molecule breaking a single rule is still marked
+            drug-like. The chips show each measured value, and a failing one is
+            highlighted.
+          </div>
+          <div><b>QED</b> is a 0 to 1 summary of drug-likeness; around 0.5 and above is typical of marketed oral drugs.</div>
+          {% if result.scored %}<div class="small">{{ result.scale }}</div>{% endif %}
+        </div>
+      </details>
+    </div>
+  </section>
+  {% endif %}
+
+  <details class="explain">
+    <summary>Model coverage: which isoforms can be scored, and why some cannot</summary>
+    <div class="explain-body">
+      <div>Potency is predicted by a Random Forest and LSTM ensemble over the
+        molecule's fingerprint <b>plus four descriptors of the target protein</b>,
+        so the same molecule scores differently against different isoforms. An
+        isoform is only scored if the model demonstrably predicts it: it needs
+        enough measured molecules <b>and</b> a usable R&sup2; on held-out molecules
+        of that isoform. Where it does not, the structure can still be docked and
+        its site inspected, and the potency number is withheld rather than guessed.</div>
+      <div class="iso-grid">
+        {% for i in isoforms %}
+        <div class="iso">
+          <div class="top">
+            <b>{{ i.label }}</b>
+            {% if i.is_scored %}<span class="chip chip-ok">R&sup2; {{ '%.2f'|format(i.test_r2) }}</span>
+            {% else %}<span class="chip chip-warn">not scored</span>{% endif %}
+          </div>
+          <small>{{ i.gene }} &middot; {{ i.role }}</small>
+          <small>{% if i.is_scored %}{{ '{:,}'.format(i.measurements) }} molecules measured{% else %}{{ i.withheld_reason }}{% endif %}</small>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="small">Trained on {{ '{:,}'.format(family_measurements) }} measurements from ChEMBL, split by molecule so no molecule appears in both training and test.</div>
+    </div>
+  </details>
+
+  <details class="explain">
+    <summary>What the docking does, and what it cannot tell you</summary>
+    <div class="explain-body">
+      <div><b>Docking</b> uses AutoDock Vina with the AutoDock4Zn force field. The
+        receptor is protonated and its zinc maps built for your structure on
+        demand, which is why the first molecule takes about a minute.</div>
+      <div><b>Read the zinc distance, not just the score.</b> Carbonic anhydrase
+        inhibitors work by coordinating the catalytic zinc with a sulfonamide
+        nitrogen at roughly 2 &#8491;. A pose that scores well but sits 5 &#8491;
+        away is probably not the real binding mode, so every pose is shown with
+        its zinc distance and the residues it touches.</div>
+      <div><b>Limits:</b> the receptor is rigid, solvent is implicit, and scores
+        are a ranking aid rather than binding free energies. Potency is
+        interpolation from measured data, not discovery.</div>
+    </div>
+  </details>
+</main>
+
+<dialog id="dockDialog" aria-labelledby="dockTitle">
+  <div class="dialog-head">
+    <h2 id="dockTitle">Docking</h2>
+    <button type="button" class="btn-ghost" id="dockClose">Close</button>
+  </div>
+  <div class="dialog-body" id="dockBody"></div>
+</dialog>
+
+<div class="overlay" id="overlay" aria-live="polite">
+  <div class="box"><span class="spinner"></span> <span id="overlayText">Working</span></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // 2D structures are drawn in the browser: RDKit's depiction module needs X11
-    // system libraries that are not available in the serverless runtime.
-    const drawer = new SmilesDrawer.Drawer({ width: 120, height: 60, bondThickness: 0.9, padding: 2 });
-    document.querySelectorAll('canvas.mol-canvas').forEach((canvas) => {
-        SmilesDrawer.parse(canvas.dataset.smiles, (tree) => drawer.draw(tree, canvas, 'light'),
-            () => { canvas.replaceWith(Object.assign(document.createElement('span'),
-                { className: 'text-muted small', textContent: 'n/a' })); });
+var STRUCTURE = {{ view_json | safe }};
+
+function showOverlay(text) {
+  document.getElementById("overlayText").textContent = text;
+  document.getElementById("overlay").classList.add("on");
+}
+
+(function () {
+  "use strict";
+
+  function escapeHtml(t) {
+    return String(t).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
+  }
 
-    const targetSelect = document.getElementById('targetSelect');
-    let viewer = $3Dmol.createViewer("viewer", { backgroundColor: "#f8fafc" });
-    let lastPose = null;
+  /* 2D depictions: RDKit's drawing module needs X11 libraries the serverless
+     runtime does not have, so structures are drawn in the browser. */
+  window.addEventListener("load", function () {
+    if (!window.SmilesDrawer) return;
+    var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var drawer = new SmilesDrawer.Drawer({ width: 104, height: 54, bondThickness: 0.9, padding: 2 });
+    document.querySelectorAll("canvas.mol").forEach(function (canvas) {
+      SmilesDrawer.parse(canvas.dataset.smiles, function (tree) {
+        drawer.draw(tree, canvas, dark ? "dark" : "light");
+      }, function () {
+        var span = document.createElement("span");
+        span.className = "mol-fallback";
+        span.textContent = canvas.dataset.smiles;
+        canvas.replaceWith(span);
+      });
+    });
+    initSiteViewer();
+  });
 
-    function styleReceptor() {
-        viewer.setStyle({}, { cartoon: { color: 'spectrum', opacity: 0.85 } });
-        viewer.setStyle({ resn: 'ZN' }, { sphere: { radius: 1.1, color: '#94a3b8' } });
+  /* ── The structure, with the docking site highlighted ── */
+  var siteViewer = null, spinning = false, boxShown = true, boxShape = null;
+
+  function initSiteViewer() {
+    var host = document.getElementById("viewer3d");
+    if (!host || !window.$3Dmol || !STRUCTURE || !STRUCTURE.site) return;
+    var site = STRUCTURE.site;
+
+    siteViewer = $3Dmol.createViewer(host, { backgroundColor: "white" });
+    $3Dmol.download("pdb:" + STRUCTURE.pdb_id, siteViewer, {}, function () {
+      var chain = site.chain;
+      siteViewer.setStyle({}, { cartoon: { color: "#c9ccd1", opacity: 0.55 } });
+      siteViewer.setStyle({ chain: chain }, { cartoon: { color: "#9aa0a6", opacity: 0.9 } });
+
+      // The pocket lining, then the histidine triad over it, then the zinc.
+      var pocket = site.pocket_residues.map(function (r) { return parseInt(r.number, 10); });
+      siteViewer.addStyle({ chain: chain, resi: pocket },
+        { stick: { radius: 0.12, color: "#b06ab3" } });
+      var triad = site.coordinating_residues.map(function (r) { return parseInt(r.number, 10); });
+      siteViewer.addStyle({ chain: chain, resi: triad },
+        { stick: { radius: 0.2, color: "#0f766e" } });
+      siteViewer.addStyle({ resn: "ZN" }, { sphere: { color: "#8a5a00", radius: 0.95 } });
+
+      site.coordinating_residues.forEach(function (r) {
+        siteViewer.addLabel(r.name + r.number, {
+          position: { x: 0, y: 0, z: 0 }, inFront: true, showBackground: true,
+          backgroundColor: "#0f766e", backgroundOpacity: 0.75, fontColor: "white",
+          fontSize: 10, alignment: "center"
+        }, { chain: chain, resi: parseInt(r.number, 10), atom: r.atom });
+      });
+
+      drawBox();
+      zoomToSite();
+    });
+  }
+
+  function drawBox() {
+    if (!siteViewer || !STRUCTURE.site) return;
+    var c = STRUCTURE.site.box_centre, d = STRUCTURE.site.box_size;
+    boxShape = siteViewer.addBox({
+      center: { x: c[0], y: c[1], z: c[2] },
+      dimensions: { w: d[0], h: d[1], d: d[2] },
+      wireframe: true, color: "#d94f4f", linewidth: 2
+    });
+    siteViewer.render();
+  }
+
+  function zoomToSite() {
+    if (!siteViewer) return;
+    var c = STRUCTURE.site.box_centre;
+    siteViewer.zoomTo({ chain: STRUCTURE.site.chain,
+                        resi: STRUCTURE.site.coordinating_residues.map(function (r) {
+                          return parseInt(r.number, 10); }) });
+    siteViewer.zoom(0.75);
+    siteViewer.render();
+  }
+
+  function bind(id, handler) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("click", function () { handler(el); });
+  }
+
+  bind("btnSite", function (el) {
+    zoomToSite();
+    el.classList.add("on");
+    document.getElementById("btnWhole").classList.remove("on");
+  });
+  bind("btnWhole", function (el) {
+    if (!siteViewer) return;
+    siteViewer.zoomTo();
+    siteViewer.render();
+    el.classList.add("on");
+    document.getElementById("btnSite").classList.remove("on");
+  });
+  bind("btnBox", function (el) {
+    if (!siteViewer) return;
+    boxShown = !boxShown;
+    if (boxShown) { drawBox(); } else if (boxShape) { siteViewer.removeShape(boxShape); boxShape = null; siteViewer.render(); }
+    el.classList.toggle("on", boxShown);
+  });
+  bind("btnSpin", function (el) {
+    if (!siteViewer) return;
+    spinning = !spinning;
+    siteViewer.spin(spinning ? "y" : false);
+    el.classList.toggle("on", spinning);
+  });
+
+  /* ── Docking ── */
+  var dialog = document.getElementById("dockDialog");
+  var body = document.getElementById("dockBody");
+  var title = document.getElementById("dockTitle");
+  var poseViewer = null, poseModel = null;
+
+  var closeBtn = document.getElementById("dockClose");
+  if (closeBtn) closeBtn.addEventListener("click", function () { dialog.close(); });
+
+  function renderPoses(data, name) {
+    var rows = data.poses.map(function (p) {
+      var zinc = p.zinc_distance === null
+        ? '<span class="withheld">no sulfonamide N</span>'
+        : '<span class="num">' + p.zinc_distance + " Å</span> " +
+          (p.zinc_contact ? '<span class="chip chip-ok">coordinates Zn</span>'
+                          : '<span class="chip chip-warn">too far</span>');
+      var contacts = (p.contacts || []).map(function (c) {
+        return '<span class="res">' + escapeHtml(c.name + c.number) + "</span>";
+      }).join(" ");
+      return "<tr" + (p.zinc_contact && p.rank === 1 ? ' class="best"' : "") + ">" +
+        '<td class="num">' + p.rank + "</td>" +
+        '<td class="r num">' + p.score.toFixed(2) + "</td>" +
+        "<td>" + zinc + "</td>" +
+        '<td><div class="residues">' + contacts + "</div></td>" +
+        '<td><button type="button" class="btn-ghost show-pose" data-rank="' + p.rank + '">Show</button></td>' +
+        "</tr>";
+    }).join("");
+
+    var coordinating = data.poses.filter(function (p) { return p.zinc_contact; }).length;
+    body.innerHTML =
+      '<div id="poseViewer"></div>' +
+      '<div class="viewer-legend">' +
+        '<span><span class="swatch" style="background:#9aa0a6"></span>receptor</span>' +
+        '<span><span class="swatch" style="background:#0f766e"></span>docked pose</span>' +
+        '<span><span class="swatch" style="background:#8a5a00"></span>zinc</span>' +
+      "</div>" +
+      '<p class="small muted" style="margin-top:12px">' + escapeHtml(data.isoform) +
+        " &middot; " + escapeHtml(data.target_pdb) + " &middot; scored with " +
+        escapeHtml(data.scoring) + " &middot; <b>" + coordinating + " of " +
+        data.poses.length + "</b> poses coordinate the zinc" +
+        (data.has_sulfonamide ? "" : " &middot; this molecule has no sulfonamide group") +
+      "</p>" +
+      '<div class="table-scroll" style="margin-top:10px"><table><thead><tr>' +
+        '<th style="width:48px">Pose</th><th class="r" style="width:92px">Score</th>' +
+        '<th style="width:210px">Sulfonamide N to Zn</th><th>Contact residues</th>' +
+        '<th style="width:84px"></th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+
+    var byRank = {};
+    data.poses.forEach(function (p) { byRank[p.rank] = p; });
+
+    if (window.$3Dmol) {
+      poseViewer = $3Dmol.createViewer("poseViewer", { backgroundColor: "white" });
+      $3Dmol.download("pdb:" + data.target_pdb, poseViewer, {}, function () {
+        poseViewer.setStyle({}, { cartoon: { color: "#9aa0a6", opacity: 0.6 } });
+        poseViewer.addStyle({ resn: "ZN" }, { sphere: { color: "#8a5a00", radius: 0.95 } });
+        showPose(data.poses[0]);
+      });
     }
+    body.querySelectorAll(".show-pose").forEach(function (b) {
+      b.addEventListener("click", function () { showPose(byRank[b.dataset.rank]); });
+    });
+  }
 
-    function loadReceptor(pdbId) {
-        viewer.clear();
-        lastPose = null;
-        $3Dmol.download("pdb:" + pdbId, viewer, {}, function () {
-            styleReceptor();
-            viewer.zoomTo({ resn: 'ZN' });
-            viewer.zoom(0.35);
-            viewer.render();
-        });
-    }
+  function showPose(pose) {
+    if (!poseViewer || !pose) return;
+    if (poseModel) poseViewer.removeModel(poseModel);
+    poseModel = poseViewer.addModel(pose.pose_pdb, "pdb");
+    poseViewer.setStyle({ model: poseModel }, { stick: { radius: 0.18, color: "#0f766e" } });
+    poseViewer.zoomTo({ model: poseModel });
+    poseViewer.zoom(0.6);
+    poseViewer.render();
+    body.querySelectorAll(".show-pose").forEach(function (b) {
+      b.disabled = String(pose.rank) === b.dataset.rank;
+    });
+  }
 
-    loadReceptor("{{ target_pdb }}");
-    targetSelect.addEventListener('change', (e) => loadReceptor(e.target.value));
+  document.querySelectorAll(".dock-btn").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var original = button.textContent;
+      button.disabled = true;
+      button.innerHTML = '<span class="spinner"></span>';
+      title.textContent = "Docking " + button.dataset.name + " into " + STRUCTURE.pdb_id;
+      body.innerHTML = '<p class="muted"><span class="spinner"></span> Preparing the receptor, ' +
+        "building the zinc maps and searching. Up to a minute the first time for a structure.</p>";
+      dialog.showModal();
 
-    function showPose(pdbqt, label) {
-        if (lastPose !== null) viewer.removeModel(lastPose);
-        lastPose = viewer.addModel(pdbqt, "pdb");
-        viewer.setStyle({ model: lastPose }, { stick: { colorscheme: 'greenCarbon', radius: 0.22 } });
-        styleReceptor();
-        viewer.zoomTo({ resn: 'ZN' });
-        viewer.zoom(0.3);
-        viewer.render();
-        document.getElementById('viewerCaption').textContent =
-            'Showing ' + label + ' in the active site. The zinc ion is the grey sphere.';
-        bootstrap.Modal.getInstance(document.getElementById('dockModal')).hide();
-        document.getElementById('viewer').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    async function runDocking(button) {
-        const { smiles, name, row } = button.dataset;
-        const targetPdb = targetSelect.value;
-
-        const modal = new bootstrap.Modal(document.getElementById('dockModal'));
-        document.getElementById('dockMolName').textContent = name;
-        document.getElementById('dockLoading').classList.remove('d-none');
-        document.getElementById('dockResults').classList.add('d-none');
-        document.getElementById('dockError').classList.add('d-none');
-        modal.show();
-
-        button.disabled = true;
-        const cell = document.getElementById('dock-result-' + row);
-        cell.innerHTML = '<span class="text-muted small">running…</span>';
-
-        try {
-            const response = await fetch('/dock', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ smiles, target_pdb: targetPdb })
-            });
-            const data = await response.json();
-            document.getElementById('dockLoading').classList.add('d-none');
-
-            if (!response.ok) {
-                document.getElementById('dockError').textContent = data.error || 'Docking failed.';
-                document.getElementById('dockError').classList.remove('d-none');
-                cell.innerHTML = '<span class="text-danger small">failed</span>';
-                return;
-            }
-
-            document.getElementById('dockResultName').textContent = name;
-            document.getElementById('dockTarget').textContent = data.target_pdb;
-            document.getElementById('dockIsoform').textContent = '(' + data.isoform + ')';
-
-            const rows = document.getElementById('dockPoseRows');
-            rows.innerHTML = '';
-            data.poses.forEach((pose) => {
-                const tr = document.createElement('tr');
-                const contact = pose.zinc_contact
-                    ? '<span class="badge bg-success">yes</span>'
-                    : (pose.zinc_distance === null
-                        ? '<span class="text-muted small">no sulfonamide</span>'
-                        : '<span class="badge bg-secondary">no</span>');
-                tr.innerHTML =
-                    '<td class="fw-bold">' + pose.rank + '</td>' +
-                    '<td class="dock-score">' + pose.score.toFixed(2) + '</td>' +
-                    '<td>' + (pose.zinc_distance === null ? '&mdash;' : pose.zinc_distance.toFixed(2) + ' &#8491;') + '</td>' +
-                    '<td>' + contact + '</td>' +
-                    '<td><button class="btn btn-sm btn-outline-primary">View in 3D</button></td>';
-                tr.querySelector('button').addEventListener('click',
-                    () => showPose(pose.pose_pdb, name + ' pose ' + pose.rank));
-                rows.appendChild(tr);
-            });
-            document.getElementById('dockResults').classList.remove('d-none');
-
-            const best = data.poses[0];
-            const contactNote = data.poses.some((p) => p.zinc_contact) ? '' : ' <span class="text-muted small">(no Zn contact)</span>';
-            cell.innerHTML = best.score.toFixed(2) + contactNote;
-        } catch (err) {
-            document.getElementById('dockLoading').classList.add('d-none');
-            document.getElementById('dockError').textContent = 'Could not reach the docking service.';
-            document.getElementById('dockError').classList.remove('d-none');
-            cell.innerHTML = '<span class="text-danger small">failed</span>';
-        } finally {
-            button.disabled = false;
+      fetch("/dock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target_pdb: STRUCTURE.pdb_id, smiles: button.dataset.smiles })
+      }).then(function (r) {
+        return r.json().then(function (d) { return { ok: r.ok, data: d }; });
+      }).then(function (res) {
+        if (!res.ok || res.data.error) {
+          body.innerHTML = '<div class="message message-error">' +
+            escapeHtml(res.data.error || "Docking failed.") + "</div>";
+          return;
         }
-    }
+        renderPoses(res.data, button.dataset.name);
+      }).catch(function () {
+        body.innerHTML = '<div class="message message-error">Could not reach the docking service.</div>';
+      }).finally(function () {
+        button.disabled = false;
+        button.textContent = original;
+      });
+    });
+  });
+})();
 </script>
 </body>
 </html>

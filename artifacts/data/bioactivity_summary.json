@@ -1,0 +1,121 @@
+{
+  "CA I": {
+    "chembl_target": "CHEMBL261",
+    "molecules": 7325,
+    "measurements": 10309,
+    "types": {
+      "Ki": 9921,
+      "IC50": 388
+    },
+    "median_pAffinity": 6.33
+  },
+  "CA II": {
+    "chembl_target": "CHEMBL205",
+    "molecules": 8353,
+    "measurements": 12121,
+    "types": {
+      "Ki": 10945,
+      "IC50": 1176
+    },
+    "median_pAffinity": 7.305
+  },
+  "CA III": {
+    "chembl_target": "CHEMBL2885",
+    "molecules": 103,
+    "measurements": 119,
+    "types": {
+      "Ki": 117,
+      "IC50": 2
+    },
+    "median_pAffinity": 5.06
+  },
+  "CA IV": {
+    "chembl_target": "CHEMBL3729",
+    "molecules": 1489,
+    "measurements": 1698,
+    "types": {
+      "Ki": 1661,
+      "IC50": 37
+    },
+    "median_pAffinity": 6.28
+  },
+  "CA VA": {
+    "chembl_target": "CHEMBL4789",
+    "molecules": 550,
+    "measurements": 681,
+    "types": {
+      "Ki": 639,
+      "IC50": 42
+    },
+    "median_pAffinity": 6.465
+  },
+  "CA VB": {
+    "chembl_target": "CHEMBL3969",
+    "molecules": 404,
+    "measurements": 500,
+    "types": {
+      "Ki": 499,
+      "IC50": 1
+    },
+    "median_pAffinity": 7.075
+  },
+  "CA VI": {
+    "chembl_target": "CHEMBL3025",
+    "molecules": 217,
+    "measurements": 359,
+    "types": {
+      "Ki": 358,
+      "IC50": 1
+    },
+    "median_pAffinity": 5.79
+  },
+  "CA VII": {
+    "chembl_target": "CHEMBL2326",
+    "molecules": 1324,
+    "measurements": 1546,
+    "types": {
+      "Ki": 1541,
+      "IC50": 5
+    },
+    "median_pAffinity": 7.3
+  },
+  "CA IX": {
+    "chembl_target": "CHEMBL3594",
+    "molecules": 6007,
+    "measurements": 7226,
+    "types": {
+      "Ki": 6882,
+      "IC50": 344
+    },
+    "median_pAffinity": 7.2
+  },
+  "CA XII": {
+    "chembl_target": "CHEMBL3242",
+    "molecules": 4730,
+    "measurements": 5400,
+    "types": {
+      "Ki": 5278,
+      "IC50": 122
+    },
+    "median_pAffinity": 7.36
+  },
+  "CA XIII": {
+    "chembl_target": "CHEMBL3912",
+    "molecules": 131,
+    "measurements": 156,
+    "types": {
+      "Ki": 156
+    },
+    "median_pAffinity": 6.04
+  },
+  "CA XIV": {
+    "chembl_target": "CHEMBL3510",
+    "molecules": 620,
+    "measurements": 759,
+    "types": {
+      "Ki": 730,
+      "IC50": 29
+    },
+    "median_pAffinity": 7.085
+  }
+}
