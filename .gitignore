@@ -15,3 +15,9 @@ artifacts/md/*_run/
 artifacts/md/_dev_run/
 
 .vercel
+
+# The trained sklearn/Keras pickle is 205 MB, over GitHub's 100 MB limit, and
+# nothing reads it at runtime: the app scores from artifacts/models/ensemble.npz,
+# which src/components/model_exporter.py writes from this file. Rebuild it with
+# python -m src.pipeline.train_pipeline.
+artifacts/best_ml_model.pkl

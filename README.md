@@ -262,7 +262,7 @@ the setting is ignored under Active CPU billing. Hobby caps at 1 vCPU, which is
 what Vina is configured for.
 
 The deployed function is **253 MB** of the 500 MB Python limit: dependencies plus
-the 7.5 MB model, the 3.4 MB AutoGrid bundle and the isoform table. Only 43 files
+the 21 MB model, the 3.4 MB AutoGrid bundle and the isoform table. Only 43 files
 are uploaded; everything offline is excluded by `.vercelignore` and
 `excludeFiles`.
 
@@ -270,7 +270,7 @@ Three deployment constraints shaped the code:
 
 - **No scikit-learn or TensorFlow at runtime.** They would not fit alongside
   RDKit and Vina, so `src/components/model_exporter.py` flattens the trained
-  models into one 7.5 MB NumPy archive and `src/pipeline/potency_model.py`
+  models into one 21 MB NumPy archive and `src/pipeline/potency_model.py`
   scores them with NumPy alone. Verified equal to the originals to 1e-12
   (forest) and 1e-4 (LSTM) in `tests/test_potency_model.py`.
 - **No Open Babel and no AutoGrid from pip.** Receptor preparation moved to
@@ -352,6 +352,12 @@ scored at all.
 
 The app reads only `ensemble.npz` and `isoforms.json`, so re-export and rebuild
 the table after any retrain.
+
+`artifacts/best_ml_model.pkl` is **not in the repository**. The retrained pickle
+is 205 MB, over GitHub's 100 MB file limit, and nothing reads it at runtime:
+`src/components/model_exporter.py` flattens it into the 21 MB `ensemble.npz`
+that the app actually scores with. `train_pipeline` writes it locally, and it is
+in `.gitignore`.
 
 ### Molecular dynamics (notebook 05)
 
