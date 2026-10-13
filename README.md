@@ -26,7 +26,33 @@ combined form hid that. **Step one** takes a PDB ID and shows what the structure
 is, what inhibiting its isoform is for, the drugs ChEMBL records against it, the
 genetic disease UniProt annotates for the gene, and an interactive 3D view of
 the protein with the docking site, the histidine triad and the search box drawn
-on it. **Step two** takes molecules and scores them.
+on it. **Step two** says what it does before you use it: paste SMILES, each goes
+through the ensemble with this isoform's protein descriptors, out comes a score,
+a drug-likeness verdict and the option to dock.
+
+### Candidates and known inhibitors share one ranking
+
+The question anyone brings to the results page is whether their molecule is any
+good compared with what already exists, so the submitted candidates and the
+isoform's known inhibitors are ranked together rather than in two tables each
+sorted within itself:
+
+- a chart places every molecule on one 0-10 axis, candidates picked out in
+  colour;
+- one table holds both sets, sorts by any column and filters to either;
+- a line says where the best candidate lands among the knowns -- "3rd of 10,
+  ahead of 7 of the 9" (`predict_pipeline._ranking`).
+
+Both sides of that comparison are **predicted**, since the knowns go through the
+same model as the candidates; ranking a prediction against a measured value
+would not be a comparison. The chart states this rather than leaving it implied.
+Checked against 5FL6 (CA IX) with the six example molecules: one table of 6
+candidates and 7 knowns, 13 bars from 9.9 down to 0.9, the best candidate ahead
+of 2 of the 7 knowns, caffeine and ibuprofen last.
+
+Colour carries one meaning throughout, the 3D and pose viewers included: indigo
+is the model's answer about your molecule, slate is a reference, amber means look
+again.
 
 | Stage | Method | Where it runs |
 |---|---|---|
@@ -35,7 +61,7 @@ on it. **Step two** takes molecules and scores them.
 | Binding site, in 3D | catalytic zinc, histidine triad, pocket lining within 8 A, search box | step 1 |
 | Potency (0-10) | Random Forest + LSTM ensemble (0.7 / 0.3) on 1024 Morgan bits **plus four descriptors of the target protein** | step 2 |
 | Drug-likeness | RDKit: all four Lipinski rules with measured values, QED, TPSA | step 2 |
-| Known inhibitors | ChEMBL target resolved from that isoform's accession, plus the ligand co-crystallised in that entry | step 2 |
+| Known inhibitors | ChEMBL target resolved from that isoform's accession, plus the ligand co-crystallised in that entry; scored and ranked alongside the candidates | step 2 |
 | Docking | receptor prepared and AutoDock4Zn maps built for that structure, then Vina | on demand, 45-60 s |
 
 ### Which structures
@@ -78,7 +104,7 @@ offered at all.
 
 ### What the score out of 10 means
 
-The percentile of the predicted pIC50 within the pIC50 values actually measured
+The percentile of the predicted affinity within the pAffinity values measured
 against **that isoform** in ChEMBL. 7.0 means "predicted more potent than 70% of
 known inhibitors of this isoform". The isoforms are not comparable on a single
 axis, which is why the reference distribution is per isoform: the measured
